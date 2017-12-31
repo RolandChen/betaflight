@@ -32,6 +32,10 @@
 #define BEEPER_INVERTED
 /*---------------------------------*/
 
+/*----------CAMERA CONTROL---------*/
+#define CAMERA_CONTROL_PIN      PB7
+/*---------------------------------*/
+
 /*------------SENSORS--------------*/
 // MPU interrupt
 #define USE_EXTI
@@ -87,7 +91,7 @@
 #define USE_MAX7456
 #define MAX7456_SPI_INSTANCE    SPI3
 #define MAX7456_SPI_CS_PIN      PB3
-#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD*2)
+#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD) // 10MHz
 #define MAX7456_RESTORE_CLK     (SPI_CLOCK_FAST)
 /*---------------------------------*/
 

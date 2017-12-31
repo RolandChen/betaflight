@@ -85,7 +85,6 @@ typedef struct pidProfile_s {
     uint8_t vbatPidCompensation;            // Scale PIDsum to battery voltage
     uint8_t pidAtMinThrottle;               // Disable/Enable pids on zero throttle. Normally even without airmode P and D would be active.
     uint8_t levelAngleLimit;                // Max angle in degrees in level mode
-    uint8_t levelSensitivity;               // Angle mode sensitivity reflected in degrees assuming user using full stick
 
     uint8_t horizon_tilt_effect;            // inclination factor for Horizon mode
     uint8_t horizon_tilt_expert_mode;       // OFF or ON
@@ -105,6 +104,8 @@ typedef struct pidProfile_s {
     uint8_t crash_recovery_angle;           // degrees
     uint8_t crash_recovery_rate;            // degree/second
     pidCrashRecovery_e crash_recovery;      // off, on, on and beeps when it is in crash recovery mode
+    uint16_t crash_limit_yaw;               // limits yaw errorRate, so crashes don't cause huge throttle increase
+    uint16_t itermLimit;
 } pidProfile_t;
 
 PG_DECLARE_ARRAY(pidProfile_t, MAX_PROFILE_COUNT, pidProfiles);
@@ -127,10 +128,10 @@ extern uint8_t PIDweight[3];
 
 void pidResetErrorGyroState(void);
 void pidStabilisationState(pidStabilisationState_e pidControllerState);
-void pidSetTargetLooptime(uint32_t pidLooptime);
 void pidSetItermAccelerator(float newItermAccelerator);
 void pidInitFilters(const pidProfile_t *pidProfile);
 void pidInitConfig(const pidProfile_t *pidProfile);
 void pidInit(const pidProfile_t *pidProfile);
+void pidCopyProfile(uint8_t dstPidProfileIndex, uint8_t srcPidProfileIndex);
 
 #endif

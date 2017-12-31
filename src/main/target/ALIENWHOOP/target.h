@@ -20,14 +20,14 @@
 
 
 
-      
+
          \   |   _ _| __|  \ |\ \      /|  |  _ \  _ \ _ \
         _ \  |     |  _|  .  | \ \ \  / __ | (   |(   |__/
       _/  _\____|___|___|_|\_|  \_/\_/ _| _|\___/\___/_|
-      
-      
+
+
               Take me to your leader-board...
-      
+
 
 
 */
@@ -104,7 +104,16 @@
 //#define SPI5_MOSI_PIN
 #endif
 
-/* Motion Processing Unit (MPU) - Invensense 6-axis MPU-6500 or 9-axis MPU-9250 
+/* OSD MAX7456E */
+#define OSD
+
+#define USE_MAX7456
+#define MAX7456_SPI_INSTANCE    SPI2
+#define MAX7456_SPI_CS_PIN      SPI2_NSS_PIN
+#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD) // 10MHz
+#define MAX7456_RESTORE_CLK     (SPI_CLOCK_FAST)
+
+/* Motion Processing Unit (MPU) - Invensense 6-axis MPU-6500 or 9-axis MPU-9250
  */
 // Interrupt
 #define USE_EXTI
@@ -129,14 +138,16 @@
 #define USE_ACC_SPI_MPU6500
 #define ACC_MPU6500_ALIGN       CW0_DEG
 
-/* Optional Digital Pressure Sensor (barometer) - Bosch BMP280 
+/* Optional Digital Pressure Sensor (barometer) - Bosch BMP280
  * TODO: not implemented on V1 or V2 pcb
  */
+#if defined(BREADBOARD)
 #define BARO
 #define USE_BARO_BMP280
 #define USE_BARO_SPI_BMP280
 #define BMP280_SPI_INSTANCE     SPI3
 #define BMP280_CS_PIN           SPI3_NSS_PIN
+#endif
 
 /* Serial ports etc.
  */
@@ -185,15 +196,17 @@
 /* Defaults - What do we want out of the box?
  */
 #if defined(BREADBOARD)
-#define DEFAULT_FEATURES        (FEATURE_RX_SERIAL | FEATURE_MOTOR_STOP | FEATURE_LED_STRIP )
+#define DEFAULT_FEATURES        (FEATURE_RX_SERIAL | FEATURE_MOTOR_STOP | FEATURE_LED_STRIP | FEATURE_OSD )
 #else
-#define DEFAULT_FEATURES        (FEATURE_RX_SERIAL | FEATURE_MOTOR_STOP) // FEATURE_TELEMETRY changes bind pin from rx to tx
+#define DEFAULT_FEATURES        (FEATURE_RX_SERIAL | FEATURE_MOTOR_STOP )  // TODO FEATURE_OSD for V3 board ... FEATURE_TELEMETRY changes bind pin from rx to tx
 #endif
 
+/* OSD currently dependent upon CMS, SMARTAUDIO, TRAMP
 #undef VTX_COMMON
 #undef VTX_CONTROL
 #undef VTX_SMARTAUDIO
 #undef VTX_TRAMP
+*/
 
 /* OLED Support
  */
@@ -204,13 +217,13 @@
 #define I2C_DEVICE              (I2CDEV_1)
 #define USE_I2C_PULLUP
 #define I2C1_SCL                PB6
-#define I2C1_SDA                PB7 
+#define I2C1_SDA                PB7
 #else
-#undef CMS
+//#undef CMS // TODO: OSD depends upon CMS
 #undef USE_I2C
 #endif
 
-/* MCU Pin Mapping - LPFQ64 Flags 
+/* MCU Pin Mapping - LPFQ64 Flags
  */
 #define TARGET_IO_PORTA         0xffff
 #define TARGET_IO_PORTB         0xffff
@@ -228,4 +241,3 @@
  */
 #define USABLE_TIMER_CHANNEL_COUNT 5
 #define USED_TIMERS             ( TIM_N(3) | TIM_N(8) | TIM_N(5) )
-

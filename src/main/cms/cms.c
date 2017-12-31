@@ -261,7 +261,7 @@ static void cmsPadToSize(char *buf, int size)
 
 static int cmsDrawMenuEntry(displayPort_t *pDisplay, OSD_Entry *p, uint8_t row)
 {
-    #define CMS_DRAW_BUFFER_LEN 10
+    #define CMS_DRAW_BUFFER_LEN 10u
     char buff[CMS_DRAW_BUFFER_LEN];
     int cnt = 0;
 
@@ -610,7 +610,7 @@ static void cmsTraverseGlobalExit(const CMS_Menu *pMenu)
 }
 
 long cmsMenuExit(displayPort_t *pDisplay, const void *ptr)
-{ 
+{
     int exitType = (int)ptr;
     switch (exitType) {
     case CMS_EXIT_SAVE:

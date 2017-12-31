@@ -17,4 +17,12 @@
 
 #pragma once
 
-extern CMS_Menu cmsx_menuVtxRTC6705;
+int sl_isalnum(int c);
+int sl_isdigit(int c);
+int sl_isupper(int c);
+int sl_islower(int c);
+int sl_tolower(int c);
+int sl_toupper(int c);
+
+int sl_strcasecmp(const char * s1, const char * s2);
+int sl_strncasecmp(const char * s1, const char * s2, int n);

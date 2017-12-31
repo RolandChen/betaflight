@@ -30,6 +30,8 @@
 
 #define INVERTER_PIN_UART1        PC0 // PC0 used as inverter select GPIO
 
+#define CAMERA_CONTROL_PIN    PB9    // define dedicated camera_osd_control pin
+
 
 #define USE_EXTI
 #define MPU_INT_EXTI            PC4
@@ -61,7 +63,7 @@
 #define USE_MAX7456
 #define MAX7456_SPI_INSTANCE    SPI3
 #define MAX7456_SPI_CS_PIN      PA15
-#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD*2)
+#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD) // 10MHz
 #define MAX7456_RESTORE_CLK     (SPI_CLOCK_FAST)
 
 #define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT
@@ -104,7 +106,9 @@
 #define UART4_RX_PIN            PA1
 #define UART4_TX_PIN            PA0
 
-#define SERIAL_PORT_COUNT       5 //VCP, USART1, USART3,USART4, USART6,
+#define USE_SOFTSERIAL1
+
+#define SERIAL_PORT_COUNT       6 //VCP, USART1, USART3,USART4, USART6, SOFT_SERIAL1
 
 #define USE_ESCSERIAL
 #define ESCSERIAL_TIMER_TX_PIN  PB9  // (HARDARE=0,PPM)

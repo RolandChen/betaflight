@@ -27,11 +27,12 @@
 #define LED1_PIN                PB4
 #define LED2_PIN                PB5
 
+//define camera control
+#define CAMERA_CONTROL_PIN      PB7 // Camera control
+
 #define BEEPER                  PC9
 #define BEEPER_OPT              PB14
 #define BEEPER_PWM_HZ           3150 // Beeper PWM frequency in Hz
-
-#define INVERTER_PIN_UART6      PB15
 
 // Gyro interrupt
 #define USE_EXTI
@@ -69,6 +70,7 @@
 
 // UART Ports
 #define USE_UART1
+#define INVERTER_PIN_UART1      PB12
 #define UART1_RX_PIN            PA10
 #define UART1_TX_PIN            PA9
 
@@ -77,6 +79,7 @@
 #define UART3_TX_PIN            PB10
 
 #define USE_UART6
+#define INVERTER_PIN_UART6      PB15
 #define UART6_RX_PIN            PC7
 #define UART6_TX_PIN            PC6
 
@@ -119,7 +122,7 @@
 #define SPI1_MOSI_PIN           PA7
 
 #define USE_SPI_DEVICE_3 //dataslash - SD Card
-#define SPI3_NSS_PIN            PB3
+#define SPI3_NSS_PIN            PA15
 #define SPI3_SCK_PIN            PC10
 #define SPI3_MISO_PIN           PC11
 #define SPI3_MOSI_PIN           PC12
@@ -129,15 +132,17 @@
 #define USE_MAX7456
 #define MAX7456_SPI_INSTANCE    SPI1
 #define MAX7456_SPI_CS_PIN      PA14
-#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD*2)
+#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD) // 10MHz
 #define MAX7456_RESTORE_CLK     (SPI_CLOCK_FAST)
 
 // ADC inputs
 #define DEFAULT_VOLTAGE_METER_SOURCE VOLTAGE_METER_ADC
+#define DEFAULT_CURRENT_METER_SOURCE CURRENT_METER_ADC
 #define USE_ADC
 #define RSSI_ADC_GPIO_PIN       PC0
 #define VBAT_ADC_PIN            PC1
 #define CURRENT_METER_ADC_PIN   PC2
+#define CURRENT_METER_SCALE_DEFAULT 150
 
 // Default configuration
 #define DEFAULT_RX_FEATURE      FEATURE_RX_SERIAL

@@ -15,6 +15,8 @@
 
 #pragma once
 
+#define TARGET_CONFIG
+
 #if defined(OMNIBUSF4SD)
 #define TARGET_BOARD_IDENTIFIER "OBSD"
 #elif defined(LUXF4OSD)
@@ -23,6 +25,7 @@
 #define TARGET_BOARD_IDENTIFIER "DYS4"
 #else
 #define TARGET_BOARD_IDENTIFIER "OBF4"
+#define OMNIBUSF4BASE // For config.c
 #endif
 
 #if defined(LUXF4OSD)
@@ -43,7 +46,10 @@
 #define BEEPER_INVERTED
 
 #ifdef OMNIBUSF4SD
+// These inverter control pins collide with timer channels on CH5 and CH6 pads.
+// Users of these timers/pads must un-map the inverter assignment explicitly.
 #define INVERTER_PIN_UART6      PC8 // Omnibus F4 V3 and later
+#define INVERTER_PIN_UART3      PC9 // Omnibus F4 Pro Corners
 #else
 #define INVERTER_PIN_UART1      PC0 // PC0 used as inverter select GPIO XXX this is not used --- remove it at the next major release
 #endif
@@ -91,11 +97,11 @@
 
 #define BARO
 #if defined(OMNIBUSF4SD)
-#define USE_BARO_BMP280
 #define USE_BARO_SPI_BMP280
 #define BMP280_SPI_INSTANCE     SPI3
 #define BMP280_CS_PIN           PB3 // v1
 #endif
+#define USE_BARO_BMP085
 #define USE_BARO_BMP280
 #define USE_BARO_MS5611
 #define BARO_I2C_INSTANCE       (I2CDEV_2)
@@ -110,7 +116,7 @@
 #define USE_MAX7456
 #define MAX7456_SPI_INSTANCE    SPI3
 #define MAX7456_SPI_CS_PIN      PA15
-#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD*2)
+#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD) // 10MHz
 #define MAX7456_RESTORE_CLK     (SPI_CLOCK_FAST)
 
 #if defined(OMNIBUSF4SD)
@@ -213,9 +219,14 @@
 
 #define TRANSPONDER
 
+#define SONAR
+
 #define DEFAULT_RX_FEATURE      FEATURE_RX_SERIAL
 
 #define DEFAULT_FEATURES        (FEATURE_OSD)
+
+#define DEFAULT_VOLTAGE_METER_SOURCE VOLTAGE_METER_ADC
+#define DEFAULT_CURRENT_METER_SOURCE CURRENT_METER_ADC
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -226,7 +237,8 @@
 
 #ifdef OMNIBUSF4SD
 #define USABLE_TIMER_CHANNEL_COUNT 15
+#define USED_TIMERS ( TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(5) | TIM_N(10) | TIM_N(12) | TIM_N(8) | TIM_N(9))
 #else
 #define USABLE_TIMER_CHANNEL_COUNT 14
-#endif
 #define USED_TIMERS ( TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(5) | TIM_N(12) | TIM_N(8) | TIM_N(9))
+#endif

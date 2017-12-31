@@ -23,7 +23,7 @@
 
 #include "build/build_config.h"
 
-#include "common/maths.h"
+#include "common/crc.h"
 #include "common/utils.h"
 
 #include "config/config_eeprom.h"
@@ -33,11 +33,7 @@
 
 #include "drivers/system.h"
 
-#ifdef EEPROM_IN_RAM
-extern uint8_t eepromData[EEPROM_SIZE];
-# define __config_start (*eepromData)
-# define __config_end (*ARRAYEND(eepromData))
-#else
+#ifndef EEPROM_IN_RAM
 extern uint8_t __config_start;   // configured via linker script when building binaries.
 extern uint8_t __config_end;
 #endif

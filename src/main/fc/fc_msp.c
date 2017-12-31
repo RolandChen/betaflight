@@ -108,6 +108,7 @@
 #include "sensors/gyro.h"
 #include "sensors/sensors.h"
 #include "sensors/sonar.h"
+#include "sensors/esc_sensor.h"
 
 #include "telemetry/telemetry.h"
 
@@ -310,7 +311,12 @@ static void serializeDataflashReadReply(sbuf_t *dst, uint32_t address, const uin
     sbufWriteU32(dst, address);
 
     // legacy format does not support compression
+#ifdef USE_HUFFMAN
     const uint8_t compressionMethod = (!allowCompression || useLegacyFormat) ? NO_COMPRESSION : HUFFMAN;
+#else
+    const uint8_t compressionMethod = NO_COMPRESSION;
+    UNUSED(allowCompression);
+#endif
 
     if (compressionMethod == NO_COMPRESSION) {
         if (!useLegacyFormat) {
@@ -732,6 +738,13 @@ static bool mspFcProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst)
             byteCount = constrain(byteCount, 0, 15);        // limit to 16 bytes (128 bits)
             sbufWriteU8(dst, byteCount);
             sbufWriteData(dst, ((uint8_t*)&flightModeFlags) + 4, byteCount);
+
+            // Write arming disable flags
+            // 1 byte, flag count
+            sbufWriteU8(dst, NUM_ARMING_DISABLE_FLAGS);
+            // 4 bytes, flags
+            uint32_t armingDisableFlags = getArmingDisableFlags();
+            sbufWriteU32(dst, armingDisableFlags);
         }
         break;
 
@@ -743,8 +756,10 @@ static bool mspFcProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst)
 
             if (acc.dev.acc_1G > 512*4) {
                 scale = 8;
-            } else if (acc.dev.acc_1G >= 512) {
+            } else if (acc.dev.acc_1G > 512*2) {
                 scale = 4;
+            } else if (acc.dev.acc_1G >= 512) {
+                scale = 2;
             } else {
                 scale = 1;
             }
@@ -913,6 +928,16 @@ static bool mspFcProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst)
 #ifdef MAG
     case MSP_COMPASS_CONFIG:
         sbufWriteU16(dst, compassConfig()->mag_declination / 10);
+        break;
+#endif
+
+#ifdef USE_DSHOT
+    case MSP_ESC_SENSOR_DATA:
+        sbufWriteU8(dst, getMotorCount());
+        for (int i = 0; i < getMotorCount(); i++) {         
+            sbufWriteU8(dst, getEscSensorData(i)->temperature);
+            sbufWriteU16(dst, getEscSensorData(i)->rpm);
+        }
         break;
 #endif
 
@@ -1125,8 +1150,6 @@ static bool mspFcProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst)
         sbufWriteU16(dst, motorConfig()->dev.motorPwmRate);
         sbufWriteU16(dst, motorConfig()->digitalIdleOffsetValue);
         sbufWriteU8(dst, gyroConfig()->gyro_use_32khz);
-        //!!TODO gyro_isr_update to be added pending decision
-        //sbufWriteU8(dst, gyroConfig()->gyro_isr_update);
         sbufWriteU8(dst, motorConfig()->dev.motorPwmInversion);
         break;
 
@@ -1157,7 +1180,7 @@ static bool mspFcProcessOutCommand(uint8_t cmdMSP, sbuf_t *dst)
         sbufWriteU16(dst, currentPidProfile->rateAccelLimit);
         sbufWriteU16(dst, currentPidProfile->yawRateAccelLimit);
         sbufWriteU8(dst, currentPidProfile->levelAngleLimit);
-        sbufWriteU8(dst, currentPidProfile->levelSensitivity);
+        sbufWriteU8(dst, 0); // was pidProfile.levelSensitivity
         sbufWriteU16(dst, currentPidProfile->itermThrottleThreshold);
         sbufWriteU16(dst, currentPidProfile->itermAcceleratorGain);
         break;
@@ -1306,6 +1329,18 @@ static mspResult_e mspFcProcessInCommand(uint8_t cmdMSP, sbuf_t *src)
                 value = 0;
             }
             changeControlRateProfile(value);
+        }
+        break;
+
+    case MSP_COPY_PROFILE:
+        value = sbufReadU8(src);        // 0 = pid profile, 1 = control rate profile
+        uint8_t dstProfileIndex = sbufReadU8(src);
+        uint8_t srcProfileIndex = sbufReadU8(src);
+        if (value == 0) {
+            pidCopyProfile(dstProfileIndex, srcProfileIndex);
+        }
+        else if (value == 1) {
+            copyControlRateProfile(dstProfileIndex, srcProfileIndex);
         }
         break;
 
@@ -1520,10 +1555,6 @@ static mspResult_e mspFcProcessInCommand(uint8_t cmdMSP, sbuf_t *src)
         if (sbufBytesRemaining(src)) {
             gyroConfigMutable()->gyro_use_32khz = sbufReadU8(src);
         }
-        //!!TODO gyro_isr_update to be added pending decision
-        /*if (sbufBytesRemaining(src)) {
-            gyroConfigMutable()->gyro_isr_update = sbufReadU8(src);
-        }*/
         validateAndFixGyroConfig();
 
         if (sbufBytesRemaining(src)) {
@@ -1570,7 +1601,7 @@ static mspResult_e mspFcProcessInCommand(uint8_t cmdMSP, sbuf_t *src)
         currentPidProfile->yawRateAccelLimit = sbufReadU16(src);
         if (sbufBytesRemaining(src) >= 2) {
             currentPidProfile->levelAngleLimit = sbufReadU8(src);
-            currentPidProfile->levelSensitivity = sbufReadU8(src);
+            sbufReadU8(src); // was pidProfile.levelSensitivity
         }
         if (sbufBytesRemaining(src) >= 4) {
             currentPidProfile->itermThrottleThreshold = sbufReadU16(src);
@@ -2078,7 +2109,7 @@ static mspResult_e mspCommonProcessInCommand(uint8_t cmdMSP, sbuf_t *src)
         return mspFcProcessInCommand(cmdMSP, src);
 #endif
     }
-    return MSP_RESULT_ERROR;
+    return MSP_RESULT_ACK;
 }
 
 /*

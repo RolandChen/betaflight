@@ -24,6 +24,8 @@
 #include "drivers/timer.h"
 
 
+#define ALL_MOTORS 255
+
 #define DSHOT_MAX_COMMAND 47
 
 /*
@@ -37,20 +39,28 @@
 
 typedef enum {
     DSHOT_CMD_MOTOR_STOP = 0,
-    DSHOT_CMD_BEEP1,
-    DSHOT_CMD_BEEP2,
-    DSHOT_CMD_BEEP3,
-    DSHOT_CMD_BEEP4,
-    DSHOT_CMD_BEEP5,
+    DSHOT_CMD_BEACON1,
+    DSHOT_CMD_BEACON2,
+    DSHOT_CMD_BEACON3,
+    DSHOT_CMD_BEACON4,
+    DSHOT_CMD_BEACON5,
     DSHOT_CMD_ESC_INFO, // V2 includes settings
     DSHOT_CMD_SPIN_DIRECTION_1,
     DSHOT_CMD_SPIN_DIRECTION_2,
     DSHOT_CMD_3D_MODE_OFF,
-    DSHOT_CMD_3D_MODE_ON, 
+    DSHOT_CMD_3D_MODE_ON,
     DSHOT_CMD_SETTINGS_REQUEST, // Currently not implemented
-    DSHOT_CMD_SAVE_SETTINGS, 
+    DSHOT_CMD_SAVE_SETTINGS,
     DSHOT_CMD_SPIN_DIRECTION_NORMAL = 20,
     DSHOT_CMD_SPIN_DIRECTION_REVERSED = 21,
+    DSHOT_CMD_LED0_ON, // BLHeli32 only
+    DSHOT_CMD_LED1_ON, // BLHeli32 only
+    DSHOT_CMD_LED2_ON, // BLHeli32 only
+    DSHOT_CMD_LED3_ON, // BLHeli32 only
+    DSHOT_CMD_LED0_OFF, // BLHeli32 only
+    DSHOT_CMD_LED1_OFF, // BLHeli32 only
+    DSHOT_CMD_LED2_OFF, // BLHeli32 only
+    DSHOT_CMD_LED3_OFF, // BLHeli32 only
     DSHOT_CMD_MAX = 47
 } dshotCommands_e;
 
@@ -85,7 +95,7 @@ typedef enum {
 #define MOTOR_BIT_1           14
 #define MOTOR_BITLENGTH       19
 
-#define MOTOR_PROSHOT1000_HZ         MHZ_TO_HZ(24) 
+#define MOTOR_PROSHOT1000_HZ         MHZ_TO_HZ(24)
 #define PROSHOT_BASE_SYMBOL          24 // 1uS
 #define PROSHOT_BIT_WIDTH            3
 #define MOTOR_NIBBLE_LENGTH_PROSHOT  96 // 4uS
@@ -168,7 +178,7 @@ uint16_t prepareDshotPacket(motorDmaOutput_t *const motor, uint16_t value);
 extern loadDmaBufferFn *loadDmaBuffer;
 
 uint32_t getDshotHz(motorPwmProtocolTypes_e pwmProtocolType);
-void pwmWriteDshotCommand(uint8_t index, uint8_t command);
+void pwmWriteDshotCommand(uint8_t index, uint8_t motorCount, uint8_t command);
 void pwmWriteDshotInt(uint8_t index, uint16_t value);
 void pwmDshotMotorHardwareConfig(const timerHardware_t *timerHardware, uint8_t motorIndex, motorPwmProtocolTypes_e pwmProtocolType, uint8_t output);
 void pwmCompleteDshotMotorUpdate(uint8_t motorCount);

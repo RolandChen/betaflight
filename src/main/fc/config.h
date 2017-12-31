@@ -58,7 +58,7 @@ typedef enum {
     FEATURE_DYNAMIC_FILTER = 1 << 29,
 } features_e;
 
-#define MAX_NAME_LENGTH 16
+#define MAX_NAME_LENGTH 16u
 typedef struct pilotConfig_s {
     char name[MAX_NAME_LENGTH + 1];
 } pilotConfig_t;
@@ -72,6 +72,7 @@ typedef struct systemConfig_s {
 #if defined(STM32F4) && !defined(DISABLE_OVERCLOCK)
     uint8_t cpu_overclock;
 #endif
+    uint8_t powerOnArmingGraceTime; // in seconds
     char boardIdentifier[sizeof(TARGET_BOARD_IDENTIFIER) + 1];
 } systemConfig_t;
 #endif
@@ -109,7 +110,7 @@ void setPreferredBeeperOffMask(uint32_t mask);
 void initEEPROM(void);
 void resetEEPROM(void);
 void readEEPROM(void);
-void writeEEPROM();
+void writeEEPROM(void);
 void ensureEEPROMContainsValidData(void);
 
 void saveConfigAndNotify(void);

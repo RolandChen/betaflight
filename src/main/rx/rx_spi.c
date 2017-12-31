@@ -109,11 +109,11 @@ STATIC_UNIT_TESTED bool rxSpiSetProtocol(rx_spi_protocol_e protocol)
         protocolSetRcDataFromPayload = inavNrf24SetRcDataFromPayload;
         break;
 #endif
-#ifdef USE_RX_FRSKYD
-    case RX_SPI_FRSKYD:
-        protocolInit = frskyD_Rx_Init;
-        protocolDataReceived = frskyD_Rx_DataReceived;
-        protocolSetRcDataFromPayload = frskyD_Rx_SetRCdata;
+#ifdef USE_RX_FRSKY_D
+    case RX_SPI_FRSKY_D:
+        protocolInit = frSkyDInit;
+        protocolDataReceived = frSkyDDataReceived;
+        protocolSetRcDataFromPayload = frSkyDSetRcData;
         break;
 #endif
     }

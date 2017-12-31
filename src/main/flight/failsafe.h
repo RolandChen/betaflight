@@ -80,7 +80,7 @@ void failsafeReset(void);
 void failsafeStartMonitoring(void);
 void failsafeUpdateState(void);
 
-failsafePhase_e failsafePhase();
+failsafePhase_e failsafePhase(void);
 bool failsafeIsMonitoring(void);
 bool failsafeIsActive(void);
 bool failsafeIsReceivingRxData(void);
@@ -89,7 +89,3 @@ void failsafeOnRxResume(void);
 
 void failsafeOnValidDataReceived(void);
 void failsafeOnValidDataFailed(void);
-
-
-
-

@@ -53,14 +53,13 @@ extern "C" {
 
     void cliSet(char *cmdline);
     void cliGet(char *cmdline);
-    void *getValuePointer(const clivalue_t *value);
 
     const clivalue_t valueTable[] = {
         { "array_unit_test",             VAR_INT8  | MODE_ARRAY | MASTER_VALUE, .config.array.length = 3, PG_RESERVED_FOR_TESTING_1, 0 }
     };
     const uint16_t valueTableEntryCount = ARRAYLEN(valueTable);
     const lookupTableEntry_t lookupTables[] = {};
-  
+
 
     PG_REGISTER(osdConfig_t, osdConfig, PG_OSD_CONFIG, 0);
     PG_REGISTER(batteryConfig_t, batteryConfig, PG_BATTERY_CONFIG, 0);
@@ -81,7 +80,7 @@ extern "C" {
     PG_REGISTER_ARRAY(rxFailsafeChannelConfig_t, MAX_SUPPORTED_RC_CHANNEL_COUNT, rxFailsafeChannelConfigs, PG_RX_FAILSAFE_CHANNEL_CONFIG, 0);
     PG_REGISTER(pidConfig_t, pidConfig, PG_PID_CONFIG, 0);
 
-    PG_REGISTER_WITH_RESET_FN(int8_t, unitTestData, PG_RESERVED_FOR_TESTING_1, 0); 
+    PG_REGISTER_WITH_RESET_FN(int8_t, unitTestData, PG_RESERVED_FOR_TESTING_1, 0);
 }
 
 #include "unittest_macros.h"
@@ -99,7 +98,7 @@ TEST(CLIUnittest, TestCliSet)
     };
 
     printf("\n===============================\n");
-    int8_t *data = (int8_t *)getValuePointer(&cval);
+    int8_t *data = (int8_t *)cliGetValuePointer(&cval);
     for(int i=0; i<3; i++){
         printf("data[%d] = %d\n", i, data[i]);
     }
@@ -182,6 +181,7 @@ void beeperWarningBeeps(uint8_t) {}
 void beeperUpdate(timeUs_t) {}
 uint32_t getArmingBeepTimeMicros(void) {return 0;}
 beeperMode_e beeperModeForTableIndex(int) {return BEEPER_SILENCE;}
+uint32_t beeperModeMaskForTableIndex(int idx) {UNUSED(idx); return 0;}
 const char *beeperNameForTableIndex(int) {return NULL;}
 int beeperTableEntryCount(void) {return 0;}
 bool isBeeperOn(void) {return false;}

@@ -318,9 +318,6 @@ typedef struct blackboxSlowState_s {
     bool rxFlightChannelsValid;
 } __attribute__((__packed__)) blackboxSlowState_t; // We pack this struct so that padding doesn't interfere with memcmp()
 
-//From mixer.c:
-extern float motorOutputHigh, motorOutputLow;
-
 //From rc_controls.c
 extern boxBitmask_t rcModeActivationMask;
 
@@ -925,25 +922,8 @@ void stopInTestMode(void)
  */
 bool inMotorTestMode(void) {
     static uint32_t resetTime = 0;
-    uint16_t inactiveMotorCommand;
-    if (feature(FEATURE_3D)) {
-       inactiveMotorCommand = flight3DConfig()->neutral3d;
-#ifdef USE_DSHOT
-    } else if (isMotorProtocolDshot()) {
-       inactiveMotorCommand = DSHOT_DISARM_COMMAND;
-#endif
-    } else {
-       inactiveMotorCommand = motorConfig()->mincommand;
-    }
 
-    int i;
-    bool atLeastOneMotorActivated = false;
-
-    // set disarmed motor values
-    for (i = 0; i < MAX_SUPPORTED_MOTORS; i++)
-        atLeastOneMotorActivated |= (motor_disarmed[i] != inactiveMotorCommand);
-
-    if (atLeastOneMotorActivated) {
+    if (!ARMING_FLAG(ARMED) && areMotorsRunning()) {
         resetTime = millis() + 5000; // add 5 seconds
         return true;
     } else {
@@ -1644,7 +1624,7 @@ void blackboxUpdate(timeUs_t currentTimeUs)
     // Did we run out of room on the device? Stop!
     if (isBlackboxDeviceFull()) {
 #ifdef USE_FLASHFS
-        if (blackboxState != BLACKBOX_STATE_ERASING 
+        if (blackboxState != BLACKBOX_STATE_ERASING
             && blackboxState != BLACKBOX_STATE_START_ERASE
             && blackboxState != BLACKBOX_STATE_ERASED) {
 #endif
@@ -1718,7 +1698,7 @@ void blackboxInit(void)
     // by default p_denom is 32 and a P-frame is written every 1ms
     // if p_denom is zero then no P-frames are logged
     if (blackboxConfig()->p_denom == 0) {
-        blackboxPInterval = 0;
+        blackboxPInterval = 0; // blackboxPInterval not used when p_denom is zero, so just set it to zero
     } else if (blackboxConfig()->p_denom > blackboxIInterval && blackboxIInterval >= 32) {
         blackboxPInterval = 1;
     } else {
