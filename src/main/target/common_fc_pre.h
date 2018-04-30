@@ -132,7 +132,7 @@
 #define USE_SERIALRX_SUMD       // Graupner Hott protocol
 #define USE_SERIALRX_SUMH       // Graupner legacy protocol
 #define USE_SERIALRX_XBUS       // JR
-
+#define USE_UNCOMMON_MIXERS
 
 
 #if (FLASH_SIZE > 64)
@@ -211,5 +211,5 @@
 #define USE_TELEMETRY_IBUS_EXTENDED
 #define USE_TELEMETRY_JETIEXBUS
 #define USE_TELEMETRY_MAVLINK
-#define USE_UNCOMMON_MIXERS
+
 #endif
