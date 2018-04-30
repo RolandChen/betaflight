@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "stdbool.h"
@@ -23,31 +26,31 @@
 #include "common/utils.h"
 
 #include "config/feature.h"
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
 
-#include "drivers/sound_beeper.h"
-#include "drivers/time.h"
+#include "drivers/io.h"
 #include "drivers/pwm_output.h"
+#include "drivers/sound_beeper.h"
+#include "drivers/system.h"
+#include "drivers/time.h"
 
 #include "flight/mixer.h"
 
 #include "fc/config.h"
 #include "fc/runtime_config.h"
 
-#include "io/beeper.h"
 #include "io/statusindicator.h"
 #include "io/vtx_control.h"
 
-#ifdef GPS
+#ifdef USE_GPS
 #include "io/gps.h"
 #endif
+
+#include "pg/beeper.h"
 
 #include "sensors/battery.h"
 #include "sensors/sensors.h"
 
-
-PG_REGISTER_WITH_RESET_TEMPLATE(beeperDevConfig_t, beeperDevConfig, PG_BEEPER_DEV_CONFIG, 0);
+#include "beeper.h"
 
 #ifdef BEEPER_INVERTED
 #define IS_OPEN_DRAIN   false
@@ -57,8 +60,7 @@ PG_REGISTER_WITH_RESET_TEMPLATE(beeperDevConfig_t, beeperDevConfig, PG_BEEPER_DE
 #define IS_INVERTED     false
 #endif
 
-#ifdef BEEPER
-#define BEEPER_PIN      BEEPER
+#ifdef USE_BEEPER
 #ifndef BEEPER_PWM_HZ
 #define BEEPER_PWM_HZ   0
 #endif
@@ -66,13 +68,6 @@ PG_REGISTER_WITH_RESET_TEMPLATE(beeperDevConfig_t, beeperDevConfig, PG_BEEPER_DE
 #define BEEPER_PIN      NONE
 #define BEEPER_PWM_HZ   0
 #endif
-
-PG_RESET_TEMPLATE(beeperDevConfig_t, beeperDevConfig,
-    .isOpenDrain = IS_OPEN_DRAIN,
-    .isInverted = IS_INVERTED,
-    .ioTag = IO_TAG(BEEPER_PIN),
-    .frequency = BEEPER_PWM_HZ
-);
 
 #if FLASH_SIZE > 64
 #define BEEPER_NAMES
@@ -83,12 +78,7 @@ PG_RESET_TEMPLATE(beeperDevConfig_t, beeperDevConfig,
 #define BEEPER_COMMAND_REPEAT 0xFE
 #define BEEPER_COMMAND_STOP   0xFF
 
-#ifdef BEEPER
-PG_REGISTER_WITH_RESET_TEMPLATE(beeperConfig_t, beeperConfig, PG_BEEPER_CONFIG, 1);
-PG_RESET_TEMPLATE(beeperConfig_t, beeperConfig,
-    .dshotBeaconTone = 0
-);
-
+#ifdef USE_BEEPER
 /* Beeper Sound Sequences: (Square wave generation)
  * Sequence must end with 0xFF or 0xFE. 0xFE repeats the sequence from
  * start when 0xFF stops the sound when it's completed.
@@ -155,11 +145,23 @@ static const uint8_t beep_gyroCalibrated[] = {
     20, 10, 20, 10, 20, 10, BEEPER_COMMAND_STOP
 };
 
+// Cam connection opened
+static const uint8_t beep_camOpenBeep[] = {
+    5, 15, 10, 15, 20, BEEPER_COMMAND_STOP
+};
+
+// Cam connection close
+static const uint8_t beep_camCloseBeep[] = {
+    10, 8, 5, BEEPER_COMMAND_STOP
+};
+
 // array used for variable # of beeps (reporting GPS sat count, etc)
 static uint8_t beep_multiBeeps[MAX_MULTI_BEEPS + 1];
 
 #define BEEPER_CONFIRMATION_BEEP_DURATION 2
 #define BEEPER_CONFIRMATION_BEEP_GAP_DURATION 20
+
+#define BEEPER_WARNING_LONG_BEEP_MULTIPLIER 5
 
 #define BEEPER_WARNING_BEEP_1_DURATION 20
 #define BEEPER_WARNING_BEEP_2_DURATION 5
@@ -212,8 +214,11 @@ typedef struct beeperTableEntry_s {
     { BEEPER_ENTRY(BEEPER_SYSTEM_INIT,           16, NULL,                 "SYSTEM_INIT") },
     { BEEPER_ENTRY(BEEPER_USB,                   17, NULL,                 "ON_USB") },
     { BEEPER_ENTRY(BEEPER_BLACKBOX_ERASE,        18, beep_2shortBeeps,     "BLACKBOX_ERASE") },
-    { BEEPER_ENTRY(BEEPER_ALL,                   19, NULL,                 "ALL") },
-    { BEEPER_ENTRY(BEEPER_PREFERENCE,            20, NULL,                 "PREFERRED") },
+    { BEEPER_ENTRY(BEEPER_CRASH_FLIP_MODE,       19, beep_2longerBeeps,    "CRASH FLIP") },
+    { BEEPER_ENTRY(BEEPER_CAM_CONNECTION_OPEN,   20, beep_camOpenBeep,     "CAM_CONNECTION_OPEN") },
+    { BEEPER_ENTRY(BEEPER_CAM_CONNECTION_CLOSE,  21, beep_camCloseBeep,    "CAM_CONNECTION_CLOSED") },
+    { BEEPER_ENTRY(BEEPER_ALL,                   22, NULL,                 "ALL") },
+    { BEEPER_ENTRY(BEEPER_PREFERENCE,            23, NULL,                 "PREFERRED") },
 };
 
 static const beeperTableEntry_t *currentBeeperEntry = NULL;
@@ -302,39 +307,59 @@ void beeperConfirmationBeeps(uint8_t beepCount)
 
 void beeperWarningBeeps(uint8_t beepCount)
 {
-    uint32_t i = 0;
-    uint32_t cLimit = beepCount * 4;
-    if (cLimit >= MAX_MULTI_BEEPS) {
-        cLimit = MAX_MULTI_BEEPS;
+    uint8_t longBeepCount = beepCount / BEEPER_WARNING_LONG_BEEP_MULTIPLIER;
+    uint8_t shortBeepCount = beepCount % BEEPER_WARNING_LONG_BEEP_MULTIPLIER;
+
+    unsigned i = 0;
+
+    unsigned count = 0;
+    while (i < MAX_MULTI_BEEPS - 1 && count < WARNING_FLASH_COUNT) {
+        beep_multiBeeps[i++] = WARNING_FLASH_DURATION_MS / 10;
+        if (++count < WARNING_FLASH_COUNT) {
+            beep_multiBeeps[i++] = WARNING_FLASH_DURATION_MS / 10;
+        } else {
+            beep_multiBeeps[i++] = WARNING_PAUSE_DURATION_MS / 10;
+        }
     }
-    do {
-        beep_multiBeeps[i++] = BEEPER_WARNING_BEEP_1_DURATION;
-        beep_multiBeeps[i++] = BEEPER_WARNING_BEEP_GAP_DURATION;
-        beep_multiBeeps[i++] = BEEPER_WARNING_BEEP_2_DURATION;
-        beep_multiBeeps[i++] = BEEPER_WARNING_BEEP_GAP_DURATION;
-    } while (i < cLimit);
+
+    while (i < MAX_MULTI_BEEPS - 1 && longBeepCount > 0) {
+        beep_multiBeeps[i++] = WARNING_CODE_DURATION_LONG_MS / 10;
+        if (--longBeepCount > 0) {
+            beep_multiBeeps[i++] = WARNING_CODE_DURATION_LONG_MS / 10;
+        } else {
+            beep_multiBeeps[i++] = WARNING_PAUSE_DURATION_MS / 10;
+        }
+    }
+
+    while (i < MAX_MULTI_BEEPS - 1 && shortBeepCount > 0) {
+        beep_multiBeeps[i++] = WARNING_CODE_DURATION_SHORT_MS / 10;
+        if (--shortBeepCount > 0) {
+            beep_multiBeeps[i++] = WARNING_CODE_DURATION_LONG_MS / 10;
+        }
+    }
+
     beep_multiBeeps[i] = BEEPER_COMMAND_STOP;
 
     beeper(BEEPER_MULTI_BEEPS);
 }
 
-#ifdef GPS
-void beeperGpsStatus(void)
+#ifdef USE_GPS
+static void beeperGpsStatus(void)
 {
-    // if GPS fix then beep out number of satellites
-    if (STATE(GPS_FIX) && gpsSol.numSat >= 5) {
-        uint8_t i = 0;
-        do {
-            beep_multiBeeps[i++] = 5;
-            beep_multiBeeps[i++] = 10;
-        } while (i < MAX_MULTI_BEEPS && gpsSol.numSat > i / 2);
+    if (!(getBeeperOffMask() & (1 << (BEEPER_GPS_STATUS - 1)))) {
+        // if GPS fix then beep out number of satellites
+        if (STATE(GPS_FIX) && gpsSol.numSat >= 5) {
+            uint8_t i = 0;
+            do {
+                beep_multiBeeps[i++] = 5;
+                beep_multiBeeps[i++] = 10;
+            } while (i < MAX_MULTI_BEEPS && gpsSol.numSat > i / 2);
 
-        beep_multiBeeps[i - 1] = 50; // extend last pause
-        beep_multiBeeps[i] = BEEPER_COMMAND_STOP;
+            beep_multiBeeps[i - 1] = 50; // extend last pause
+            beep_multiBeeps[i] = BEEPER_COMMAND_STOP;
 
-        beeper(BEEPER_MULTI_BEEPS);    //initiate sequence
-    } else {
-        beeper(BEEPER_RX_SET);
+            beeper(BEEPER_MULTI_BEEPS);    //initiate sequence
+        }
     }
 }
 #endif
@@ -347,14 +372,10 @@ void beeperUpdate(timeUs_t currentTimeUs)
 {
     // If beeper option from AUX switch has been selected
     if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-#ifdef GPS
-        if (feature(FEATURE_GPS)) {
-            beeperGpsStatus();
-        } else {
-            beeper(BEEPER_RX_SET);
-        }
-#else
         beeper(BEEPER_RX_SET);
+#ifdef USE_GPS
+    } else if (feature(FEATURE_GPS) && IS_RC_MODE_ACTIVE(BOXBEEPGPSCOUNT)) {
+        beeperGpsStatus();
 #endif
     }
 
@@ -367,19 +388,20 @@ void beeperUpdate(timeUs_t currentTimeUs)
         return;
     }
 
-    #ifdef USE_DSHOT
-    if (!areMotorsRunning() && beeperConfig()->dshotBeaconTone && (beeperConfig()->dshotBeaconTone <= DSHOT_CMD_BEACON5) && currentBeeperEntry->mode == BEEPER_RX_SET) {
-        pwmDisableMotors();
-        delay(1);
-
-        pwmWriteDshotCommand(ALL_MOTORS, getMotorCount(), beeperConfig()->dshotBeaconTone);
-
-        pwmEnableMotors();
-    }
-    #endif
-
     if (!beeperIsOn) {
         beeperIsOn = 1;
+
+#ifdef USE_DSHOT
+        if (!areMotorsRunning() && beeperConfig()->dshotBeaconTone && (beeperConfig()->dshotBeaconTone <= DSHOT_CMD_BEACON5) && (currentBeeperEntry->mode == BEEPER_RX_SET || currentBeeperEntry->mode == BEEPER_RX_LOST)) {
+            pwmDisableMotors();
+            delay(1);
+
+            pwmWriteDshotCommand(ALL_MOTORS, getMotorCount(), beeperConfig()->dshotBeaconTone);
+
+            pwmEnableMotors();
+        }
+#endif
+
         if (currentBeeperEntry->sequence[beeperPos] != 0) {
             if (!(getBeeperOffMask() & (1 << (currentBeeperEntry->mode - 1))))
                 BEEP_ON;

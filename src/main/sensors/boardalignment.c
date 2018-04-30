@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -20,11 +23,13 @@
 #include <math.h>
 #include <string.h>
 
+#include "platform.h"
+
 #include "common/maths.h"
 #include "common/axis.h"
 
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
+#include "pg/pg.h"
+#include "pg/pg_ids.h"
 
 #include "drivers/sensor.h"
 
@@ -57,22 +62,22 @@ void initBoardAlignment(const boardAlignment_t *boardAlignment)
     buildRotationMatrix(&rotationAngles, boardRotation);
 }
 
-static void alignBoard(int32_t *vec)
+static void alignBoard(float *vec)
 {
-    int32_t x = vec[X];
-    int32_t y = vec[Y];
-    int32_t z = vec[Z];
+    float x = vec[X];
+    float y = vec[Y];
+    float z = vec[Z];
 
-    vec[X] = lrintf(boardRotation[0][X] * x + boardRotation[1][X] * y + boardRotation[2][X] * z);
-    vec[Y] = lrintf(boardRotation[0][Y] * x + boardRotation[1][Y] * y + boardRotation[2][Y] * z);
-    vec[Z] = lrintf(boardRotation[0][Z] * x + boardRotation[1][Z] * y + boardRotation[2][Z] * z);
+    vec[X] = (boardRotation[0][X] * x + boardRotation[1][X] * y + boardRotation[2][X] * z);
+    vec[Y] = (boardRotation[0][Y] * x + boardRotation[1][Y] * y + boardRotation[2][Y] * z);
+    vec[Z] = (boardRotation[0][Z] * x + boardRotation[1][Z] * y + boardRotation[2][Z] * z);
 }
 
-void alignSensors(int32_t *dest, uint8_t rotation)
+FAST_CODE void alignSensors(float *dest, uint8_t rotation)
 {
-    const int32_t x = dest[X];
-    const int32_t y = dest[Y];
-    const int32_t z = dest[Z];
+    const float x = dest[X];
+    const float y = dest[Y];
+    const float z = dest[Z];
 
     switch (rotation) {
     default:

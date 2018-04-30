@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -21,13 +24,13 @@
 
 #include <platform.h>
 
-#ifdef USE_DSHOT
+#if defined(USE_ESC_SENSOR)
 
 #include "build/debug.h"
 
 #include "config/feature.h"
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
+#include "pg/pg.h"
+#include "pg/pg_ids.h"
 
 #include "common/maths.h"
 #include "common/utils.h"
@@ -145,6 +148,10 @@ bool isEscSensorActive(void)
 
 escSensorData_t *getEscSensorData(uint8_t motorNumber)
 {
+    if (!feature(FEATURE_ESC_SENSOR)) {
+        return NULL;
+    }
+
     if (motorNumber < getMotorCount()) {
         return &escSensorData[motorNumber];
     } else if (motorNumber == ESC_SENSOR_COMBINED) {
@@ -180,8 +187,10 @@ escSensorData_t *getEscSensorData(uint8_t motorNumber)
 }
 
 // Receive ISR callback
-static void escSensorDataReceive(uint16_t c)
+static void escSensorDataReceive(uint16_t c, void *data)
 {
+    UNUSED(data);
+
     // KISS ESC sends some data during startup, ignore this for now (maybe future use)
     // startup data could be firmware version and serialnumber
 
@@ -202,7 +211,7 @@ bool escSensorInit(void)
     portOptions_e options = SERIAL_NOT_INVERTED  | (escSensorConfig()->halfDuplex ? SERIAL_BIDIR : 0);
 
     // Initialize serial port
-    escSensorPort = openSerialPort(portConfig->identifier, FUNCTION_ESC_SENSOR, escSensorDataReceive, ESC_SENSOR_BAUDRATE, MODE_RX, options);
+    escSensorPort = openSerialPort(portConfig->identifier, FUNCTION_ESC_SENSOR, escSensorDataReceive, NULL, ESC_SENSOR_BAUDRATE, MODE_RX, options);
 
     for (int i = 0; i < MAX_SUPPORTED_MOTORS; i = i + 1) {
         escSensorData[i].dataAge = ESC_DATA_INVALID;

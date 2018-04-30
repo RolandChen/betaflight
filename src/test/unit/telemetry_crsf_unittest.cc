@@ -34,8 +34,8 @@ extern "C" {
     #include "common/printf.h"
     #include "common/typeconversion.h"
 
-    #include "config/parameter_group.h"
-    #include "config/parameter_group_ids.h"
+    #include "pg/pg.h"
+    #include "pg/pg_ids.h"
 
     #include "drivers/serial.h"
     #include "drivers/system.h"
@@ -54,6 +54,7 @@ extern "C" {
 
     #include "sensors/battery.h"
     #include "sensors/sensors.h"
+    #include "sensors/acceleration.h"
 
     #include "telemetry/crsf.h"
     #include "telemetry/telemetry.h"
@@ -70,6 +71,7 @@ extern "C" {
     PG_REGISTER(telemetryConfig_t, telemetryConfig, PG_TELEMETRY_CONFIG, 0);
     PG_REGISTER(systemConfig_t, systemConfig, PG_SYSTEM_CONFIG, 0);
     PG_REGISTER(rxConfig_t, rxConfig, PG_RX_CONFIG, 0);
+    PG_REGISTER(accelerometerConfig_t, accelerometerConfig, PG_ACCELEROMETER_CONFIG, 0);
 }
 
 #include "unittest_macros.h"
@@ -298,7 +300,7 @@ uint8_t serialRead(serialPort_t *) {return 0;}
 void serialWrite(serialPort_t *, uint8_t) {}
 void serialWriteBuf(serialPort_t *, const uint8_t *, int) {}
 void serialSetMode(serialPort_t *, portMode_e) {}
-serialPort_t *openSerialPort(serialPortIdentifier_e, serialPortFunction_e, serialReceiveCallbackPtr, uint32_t, portMode_e, portOptions_e) {return NULL;}
+serialPort_t *openSerialPort(serialPortIdentifier_e, serialPortFunction_e, serialReceiveCallbackPtr, void *, uint32_t, portMode_e, portOptions_e) {return NULL;}
 void closeSerialPort(serialPort_t *) {}
 bool isSerialTransmitBufferEmpty(const serialPort_t *) { return true; }
 
@@ -332,6 +334,9 @@ int32_t getMAhDrawn(void){
 }
 
 bool sendMspReply(uint8_t, mspResponseFnPtr) { return false; }
-bool handleMspFrame(uint8_t *, uint8_t *)  { return false; }
+bool handleMspFrame(uint8_t *, int)  { return false; }
+void crsfScheduleMspResponse(void) {};
+bool isBatteryVoltageConfigured(void) { return true; }
+bool isAmperageConfigured(void) { return true; }
 
 }

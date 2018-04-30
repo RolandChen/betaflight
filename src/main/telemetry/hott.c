@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -59,7 +62,7 @@
 #include "platform.h"
 
 
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
 
 #include "build/build_config.h"
 #include "build/debug.h"
@@ -74,7 +77,6 @@
 
 #include "flight/altitude.h"
 #include "flight/pid.h"
-#include "flight/navigation.h"
 
 #include "io/gps.h"
 
@@ -125,7 +127,7 @@ static void initialiseEAMMessage(HOTT_EAM_MSG_t *msg, size_t size)
     msg->stop_byte = 0x7D;
 }
 
-#ifdef GPS
+#ifdef USE_GPS
 typedef enum {
     GPS_FIX_CHAR_NONE = '-',
     GPS_FIX_CHAR_2D = '2',
@@ -146,12 +148,12 @@ static void initialiseGPSMessage(HOTT_GPS_MSG_t *msg, size_t size)
 static void initialiseMessages(void)
 {
     initialiseEAMMessage(&hottEAMMessage, sizeof(hottEAMMessage));
-#ifdef GPS
+#ifdef USE_GPS
     initialiseGPSMessage(&hottGPSMessage, sizeof(hottGPSMessage));
 #endif
 }
 
-#ifdef GPS
+#ifdef USE_GPS
 void addGPSCoordinates(HOTT_GPS_MSG_t *hottGPSMessage, int32_t latitude, int32_t longitude)
 {
     int16_t deg = latitude / GPS_DEGREES_DIVIDER;
@@ -330,7 +332,7 @@ static void workAroundForHottTelemetryOnUsart(serialPort_t *instance, portMode_e
         portOptions |= SERIAL_BIDIR;
     }
 
-    hottPort = openSerialPort(instance->identifier, FUNCTION_TELEMETRY_HOTT, NULL, HOTT_BAUDRATE, mode, portOptions);
+    hottPort = openSerialPort(instance->identifier, FUNCTION_TELEMETRY_HOTT, NULL, NULL, HOTT_BAUDRATE, mode, portOptions);
 }
 
 static bool hottIsUsingHardwareUART(void)
@@ -346,6 +348,8 @@ static void hottConfigurePortForTX(void)
     } else {
         serialSetMode(hottPort, MODE_TX);
     }
+    hottIsSending = true;
+    hottMsgCrc = 0;
 }
 
 static void hottConfigurePortForRX(void)
@@ -356,24 +360,9 @@ static void hottConfigurePortForRX(void)
     } else {
         serialSetMode(hottPort, MODE_RX);
     }
+    hottMsg = NULL;
+    hottIsSending = false;
     flushHottRxBuffer();
-}
-
-static void hottReconfigurePort(void)
-{
-    if (!hottIsSending) {
-        hottIsSending = true;
-        hottMsgCrc = 0;
-        hottConfigurePortForTX();
-        return;
-    }
-
-    if (hottMsgRemainingBytesToSendCount == 0) {
-        hottMsg = NULL;
-        hottIsSending = false;
-        hottConfigurePortForRX();
-        return;
-    }
 }
 
 void configureHoTTTelemetryPort(void)
@@ -388,7 +377,7 @@ void configureHoTTTelemetryPort(void)
         portOptions |= SERIAL_BIDIR;
     }
 
-    hottPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_HOTT, NULL, HOTT_BAUDRATE, HOTT_PORT_MODE, portOptions);
+    hottPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_HOTT, NULL, NULL, HOTT_BAUDRATE, HOTT_PORT_MODE, portOptions);
 
     if (!hottPort) {
         return;
@@ -421,7 +410,7 @@ static inline void hottSendEAMResponse(void)
 
 static void hottPrepareMessages(void) {
     hottPrepareEAMResponse(&hottEAMMessage);
-#ifdef GPS
+#ifdef USE_GPS
     hottPrepareGPSResponse(&hottGPSMessage);
 #endif
 }
@@ -436,7 +425,7 @@ static void processBinaryModeRequest(uint8_t address)
 #endif
 
     switch (address) {
-#ifdef GPS
+#ifdef USE_GPS
     case 0x8A:
 #ifdef HOTT_DEBUG
         hottGPSRequests++;
@@ -457,7 +446,7 @@ static void processBinaryModeRequest(uint8_t address)
 #ifdef HOTT_DEBUG
     hottBinaryRequests++;
     debug[0] = hottBinaryRequests;
-#ifdef GPS
+#ifdef USE_GPS
     debug[1] = hottGPSRequests;
 #endif
     debug[2] = hottEAMRequests;
@@ -510,7 +499,15 @@ static void hottCheckSerialData(uint32_t currentMicros)
 
 static void hottSendTelemetryData(void) {
 
-    hottReconfigurePort();
+    if (!hottIsSending) {
+        hottConfigurePortForTX();
+        return;
+    }
+
+    if (hottMsgRemainingBytesToSendCount == 0) {
+        hottConfigurePortForRX();
+        return;
+    }
 
     --hottMsgRemainingBytesToSendCount;
     if (hottMsgRemainingBytesToSendCount == 0) {

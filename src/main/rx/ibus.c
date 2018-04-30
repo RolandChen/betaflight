@@ -1,20 +1,24 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
  *
- *
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
  * Driver for IBUS (Flysky) receiver
  *   - initial implementation for MultiWii by Cesco/Pl¸schi
  *   - implementation for BaseFlight by Andreas (fiendie) Tacke
@@ -27,7 +31,7 @@
 
 #include "platform.h"
 
-#ifdef SERIAL_RX
+#ifdef USE_SERIAL_RX
 
 #include "common/utils.h"
 
@@ -37,7 +41,7 @@
 
 #include "io/serial.h"
 
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
 #include "telemetry/telemetry.h"
 #endif
 
@@ -76,8 +80,10 @@ static bool isValidIa6bIbusPacketLength(uint8_t length)
 
 
 // Receive ISR callback
-static void ibusDataReceive(uint16_t c)
+static void ibusDataReceive(uint16_t c, void *data)
 {
+    UNUSED(data);
+
     uint32_t ibusTime;
     static uint32_t ibusTimeLast;
     static uint8_t ibusFramePosition;
@@ -154,8 +160,10 @@ static void updateChannelData(void) {
     }
 }
 
-static uint8_t ibusFrameStatus(void)
+static uint8_t ibusFrameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
 {
+    UNUSED(rxRuntimeConfig);
+
     uint8_t frameStatus = RX_FRAME_PENDING;
 
     if (!ibusFrameDone) {
@@ -171,7 +179,7 @@ static uint8_t ibusFrameStatus(void)
         }
         else
         {
-#if defined(TELEMETRY) && defined(TELEMETRY_IBUS)
+#if defined(USE_TELEMETRY) && defined(USE_TELEMETRY_IBUS)
             rxBytesToIgnore = respondToIbusRequest(ibus);
 #endif
         }
@@ -204,7 +212,7 @@ bool ibusInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig)
         return false;
     }
 
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
     // bool portShared = telemetryCheckRxPortShared(portConfig);
     bool portShared = isSerialPortShared(portConfig, FUNCTION_RX_SERIAL, FUNCTION_TELEMETRY_IBUS);
 #else
@@ -216,12 +224,13 @@ bool ibusInit(const rxConfig_t *rxConfig, rxRuntimeConfig_t *rxRuntimeConfig)
     serialPort_t *ibusPort = openSerialPort(portConfig->identifier,
         FUNCTION_RX_SERIAL,
         ibusDataReceive,
+        NULL,
         IBUS_BAUDRATE,
         portShared ? MODE_RXTX : MODE_RX,
-        SERIAL_NOT_INVERTED | (rxConfig->halfDuplex || portShared ? SERIAL_BIDIR : 0)
+        (rxConfig->serialrx_inverted ? SERIAL_INVERTED : 0) | (rxConfig->halfDuplex || portShared ? SERIAL_BIDIR : 0)
         );
 
-#if defined(TELEMETRY) && defined(TELEMETRY_IBUS)
+#if defined(USE_TELEMETRY) && defined(USE_TELEMETRY_IBUS)
     if (portShared) {
         initSharedIbusTelemetry(ibusPort);
     }

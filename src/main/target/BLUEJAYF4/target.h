@@ -1,23 +1,26 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
 #define TARGET_BOARD_IDENTIFIER "BJF4"
-#define TARGET_CONFIG
+#define USE_TARGET_CONFIG
 #define TARGET_VALIDATECONFIG
 #define TARGET_PREINIT
 
@@ -32,7 +35,8 @@
 #define LED1_PIN                PB5
 #define LED2_PIN                PB4
 
-#define BEEPER                  PC1
+#define USE_BEEPER
+#define BEEPER_PIN              PC1
 #define BEEPER_OPT              PB7
 #define BEEPER_INVERTED
 
@@ -50,22 +54,23 @@
 #define MPU6500_CS_PIN          PC4
 #define MPU6500_SPI_INSTANCE    SPI1
 
-#define ACC
+#define USE_ACC
 #define USE_ACC_MPU6500
 #define USE_ACC_SPI_MPU6500
 #define ACC_MPU6500_ALIGN       CW0_DEG
 
-#define GYRO
+#define USE_GYRO
 #define USE_GYRO_MPU6500
 #define USE_GYRO_SPI_MPU6500
 #define GYRO_MPU6500_ALIGN      CW0_DEG
 
-#define MAG
+#define USE_MAG
 #define USE_MAG_HMC5883
+#define USE_MAG_QMC5883
 //#define USE_MAG_AK8963
 #define HMC5883_I2C_INSTANCE    I2CDEV_1
 
-#define BARO
+#define USE_BARO
 #define USE_BARO_MS5611
 #define MS5611_I2C_INSTANCE     I2CDEV_1
 
@@ -83,9 +88,7 @@
 #define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4 // 21MHz
 
 #define SDCARD_DMA_CHANNEL_TX               DMA1_Stream5
-#define SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG DMA_FLAG_TCIF5
-#define SDCARD_DMA_CLK                      RCC_AHB1Periph_DMA1
-#define SDCARD_DMA_CHANNEL                  DMA_Channel_0
+#define SDCARD_DMA_CHANNEL                  0
 
 // Performance logging for SD card operations:
 // #define AFATFS_USE_INTROSPECTIVE_LOGGING
@@ -97,8 +100,8 @@
 #define USE_FLASH_M25P16
 
 #define USE_VCP
-//#define VBUS_SENSING_PIN PA8
-//#define VBUS_SENSING_ENABLED
+//#define USB_DETECT_PIN   PA8
+//#define USE_USB_DETECT
 
 #define USE_UART1
 #define UART1_RX_PIN            PA10
@@ -119,8 +122,12 @@
 #define UART4_TX_PIN            NONE // PA0
 
 #define USE_SOFTSERIAL1
-#define SOFTSERIAL1_RX_PIN      PB0 // PWM5
-#define SOFTSERIAL1_TX_PIN      PB1 // PWM6
+// Since PB0 (motor 5) and PB1 (motor 6) are assigned with N-channels, these pin can not handle input.
+// Therefore, receiving function of SOFTSERIAL1 can only be assigned to PB3 (DEBUG).
+// Default defined here is to use DEBUG for half-duplex serial, suitable for VTX (SmartAudio or Tramp) controls.
+// For non-half-duplex requirement (full-duplex or simplex in either direction), assign PB3 to RX and PB0 or PB1 to TX.
+#define SOFTSERIAL1_RX_PIN      NONE
+#define SOFTSERIAL1_TX_PIN      PB3  // DEBUG
 
 #define USE_SOFTSERIAL2
 

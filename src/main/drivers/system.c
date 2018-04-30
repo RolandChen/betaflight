@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -20,12 +23,13 @@
 
 #include "platform.h"
 
-#include "light_led.h"
-#include "sound_beeper.h"
-#include "drivers/nvic.h"
 #include "build/atomic.h"
 
-#include "drivers/system.h"
+#include "drivers/light_led.h"
+#include "drivers/nvic.h"
+#include "drivers/sound_beeper.h"
+
+#include "system.h"
 
 // cycles per microsecond
 static uint32_t usTicks = 0;
@@ -160,10 +164,6 @@ void delay(uint32_t ms)
         delayMicroseconds(1000);
 }
 
-#define SHORT_FLASH_DURATION 50
-#define SHORT_FLASH_COUNT 5
-#define CODE_FLASH_DURATION 250
-
 static void indicate(uint8_t count, uint16_t duration)
 {
     if (count) {
@@ -187,11 +187,11 @@ static void indicate(uint8_t count, uint16_t duration)
 void indicateFailure(failureMode_e mode, int codeRepeatsRemaining)
 {
     while (codeRepeatsRemaining--) {
-        indicate(SHORT_FLASH_COUNT, SHORT_FLASH_DURATION);
+        indicate(WARNING_FLASH_COUNT, WARNING_FLASH_DURATION_MS);
 
-        delay(500);
+        delay(WARNING_PAUSE_DURATION_MS);
 
-        indicate(mode + 1, CODE_FLASH_DURATION);
+        indicate(mode + 1, WARNING_CODE_DURATION_LONG_MS);
 
         delay(1000);
     }

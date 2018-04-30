@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -21,7 +24,7 @@
 
 #include "platform.h"
 
-#if defined(CMS) && defined(VTX_TRAMP)
+#if defined(USE_CMS) && defined(USE_VTX_TRAMP)
 
 #include "common/printf.h"
 #include "common/utils.h"
@@ -29,9 +32,13 @@
 #include "cms/cms.h"
 #include "cms/cms_types.h"
 
+#include "drivers/vtx_common.h"
+
+#include "fc/config.h"
+
 #include "io/vtx_string.h"
 #include "io/vtx_tramp.h"
-
+#include "io/vtx.h"
 
 char trampCmsStatusString[31] = "- -- ---- ----";
 //                               m bc ffff tppp
@@ -62,15 +69,15 @@ uint8_t trampCmsBand = 1;
 uint8_t trampCmsChan = 1;
 uint16_t trampCmsFreqRef;
 
-static OSD_TAB_t trampCmsEntBand = { &trampCmsBand, 5, vtx58BandNames };
+static OSD_TAB_t trampCmsEntBand = { &trampCmsBand, VTX_TRAMP_BAND_COUNT, vtx58BandNames };
 
-static OSD_TAB_t trampCmsEntChan = { &trampCmsChan, 8, vtx58ChannelNames };
+static OSD_TAB_t trampCmsEntChan = { &trampCmsChan, VTX_TRAMP_CHANNEL_COUNT, vtx58ChannelNames };
 
 static OSD_UINT16_t trampCmsEntFreqRef = { &trampCmsFreqRef, 5600, 5900, 0 };
 
 static uint8_t trampCmsPower = 1;
 
-static OSD_TAB_t trampCmsEntPower = { &trampCmsPower, 5, trampPowerNames };
+static OSD_TAB_t trampCmsEntPower = { &trampCmsPower, sizeof(trampPowerTable), trampPowerNames };
 
 static void trampCmsUpdateFreqRef(void)
 {
@@ -152,6 +159,13 @@ static long trampCmsCommence(displayPort_t *pDisp, const void *self)
     // If it fails, the user should retry later
     trampCommitChanges();
 
+    // update'vtx_' settings
+    vtxSettingsConfigMutable()->band = trampCmsBand;
+    vtxSettingsConfigMutable()->channel = trampCmsChan;
+    vtxSettingsConfigMutable()->power = trampCmsPower;
+    vtxSettingsConfigMutable()->freq = vtx58_Bandchan2Freq(trampCmsBand, trampCmsChan);
+
+    saveConfigAndNotify();
 
     return MENU_CHAIN_BACK;
 }
@@ -188,11 +202,12 @@ static OSD_Entry trampCmsMenuCommenceEntries[] = {
 };
 
 static CMS_Menu trampCmsMenuCommence = {
+#ifdef CMS_MENU_DEBUG
     .GUARD_text = "XVTXTRC",
     .GUARD_type = OME_MENU,
+#endif
     .onEnter = NULL,
     .onExit = NULL,
-    .onGlobalExit = NULL,
     .entries = trampCmsMenuCommenceEntries,
 };
 
@@ -214,11 +229,12 @@ static OSD_Entry trampMenuEntries[] =
 };
 
 CMS_Menu cmsx_menuVtxTramp = {
+#ifdef CMS_MENU_DEBUG
     .GUARD_text = "XVTXTR",
     .GUARD_type = OME_MENU,
+#endif
     .onEnter = trampCmsOnEnter,
     .onExit = NULL,
-    .onGlobalExit = NULL,
     .entries = trampMenuEntries,
 };
 #endif

@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -20,6 +23,8 @@
 #include <string.h>
 
 #include "platform.h"
+
+#ifdef USE_ADC
 
 #include "drivers/accgyro/accgyro.h"
 #include "drivers/io.h"
@@ -33,9 +38,8 @@
 
 #include "common/utils.h"
 
-#ifndef ADC_INSTANCE
-#define ADC_INSTANCE                ADC1
-#endif
+#include "pg/adc.h"
+
 
 const adcDevice_t adcHardware[] = {
     { .ADCx = ADC1, .rccADC = RCC_AHB(ADC12), .DMAy_Channelx = DMA1_Channel1 },
@@ -48,60 +52,46 @@ const adcDevice_t adcHardware[] = {
 };
 
 const adcTagMap_t adcTagMap[] = {
-    { DEFIO_TAG_E__PA0,  ADC_Channel_1  }, // ADC1
-    { DEFIO_TAG_E__PA1,  ADC_Channel_2  }, // ADC1
-    { DEFIO_TAG_E__PA2,  ADC_Channel_3  }, // ADC1
-    { DEFIO_TAG_E__PA3,  ADC_Channel_4  }, // ADC1
-    { DEFIO_TAG_E__PA4,  ADC_Channel_1  }, // ADC2
-    { DEFIO_TAG_E__PA5,  ADC_Channel_2  }, // ADC2
-    { DEFIO_TAG_E__PA6,  ADC_Channel_3  }, // ADC2
-    { DEFIO_TAG_E__PA7,  ADC_Channel_4  }, // ADC2
-    { DEFIO_TAG_E__PB0,  ADC_Channel_12 }, // ADC3
-    { DEFIO_TAG_E__PB1,  ADC_Channel_1  }, // ADC3
-    { DEFIO_TAG_E__PB2,  ADC_Channel_12 }, // ADC2
-    { DEFIO_TAG_E__PB12, ADC_Channel_3  }, // ADC4
-    { DEFIO_TAG_E__PB13, ADC_Channel_5  }, // ADC3
-    { DEFIO_TAG_E__PB14, ADC_Channel_4  }, // ADC4
-    { DEFIO_TAG_E__PB15, ADC_Channel_5  }, // ADC4
-    { DEFIO_TAG_E__PC0,  ADC_Channel_6  }, // ADC12
-    { DEFIO_TAG_E__PC1,  ADC_Channel_7  }, // ADC12
-    { DEFIO_TAG_E__PC2,  ADC_Channel_8  }, // ADC12
-    { DEFIO_TAG_E__PC3,  ADC_Channel_9  }, // ADC12
-    { DEFIO_TAG_E__PC4,  ADC_Channel_5  }, // ADC2
-    { DEFIO_TAG_E__PC5,  ADC_Channel_11 }, // ADC2
-    { DEFIO_TAG_E__PD8,  ADC_Channel_12 }, // ADC4
-    { DEFIO_TAG_E__PD9,  ADC_Channel_13 }, // ADC4
-    { DEFIO_TAG_E__PD10, ADC_Channel_7  }, // ADC34
-    { DEFIO_TAG_E__PD11, ADC_Channel_8  }, // ADC34
-    { DEFIO_TAG_E__PD12, ADC_Channel_9  }, // ADC34
-    { DEFIO_TAG_E__PD13, ADC_Channel_10 }, // ADC34
-    { DEFIO_TAG_E__PD14, ADC_Channel_11 }, // ADC34
-    { DEFIO_TAG_E__PE7,  ADC_Channel_13 }, // ADC3
-    { DEFIO_TAG_E__PE8,  ADC_Channel_6  }, // ADC34
-    { DEFIO_TAG_E__PE9,  ADC_Channel_2  }, // ADC3
-    { DEFIO_TAG_E__PE10, ADC_Channel_14 }, // ADC3
-    { DEFIO_TAG_E__PE11, ADC_Channel_15 }, // ADC3
-    { DEFIO_TAG_E__PE12, ADC_Channel_16 }, // ADC3
-    { DEFIO_TAG_E__PE13, ADC_Channel_3  }, // ADC3
-    { DEFIO_TAG_E__PE14, ADC_Channel_1  }, // ADC4
-    { DEFIO_TAG_E__PE15, ADC_Channel_2  }, // ADC4
-    { DEFIO_TAG_E__PF2,  ADC_Channel_10 }, // ADC12
-    { DEFIO_TAG_E__PF4,  ADC_Channel_5  }, // ADC1
+    { DEFIO_TAG_E__PA0,  ADC_DEVICES_1,  ADC_Channel_1  }, // ADC1
+    { DEFIO_TAG_E__PA1,  ADC_DEVICES_1,  ADC_Channel_2  }, // ADC1
+    { DEFIO_TAG_E__PA2,  ADC_DEVICES_1,  ADC_Channel_3  }, // ADC1
+    { DEFIO_TAG_E__PA3,  ADC_DEVICES_1,  ADC_Channel_4  }, // ADC1
+    { DEFIO_TAG_E__PA4,  ADC_DEVICES_2,  ADC_Channel_1  }, // ADC2
+    { DEFIO_TAG_E__PA5,  ADC_DEVICES_2,  ADC_Channel_2  }, // ADC2
+    { DEFIO_TAG_E__PA6,  ADC_DEVICES_2,  ADC_Channel_3  }, // ADC2
+    { DEFIO_TAG_E__PA7,  ADC_DEVICES_4,  ADC_Channel_4  }, // ADC2
+    { DEFIO_TAG_E__PB0,  ADC_DEVICES_3,  ADC_Channel_12 }, // ADC3
+    { DEFIO_TAG_E__PB1,  ADC_DEVICES_3,  ADC_Channel_1  }, // ADC3
+    { DEFIO_TAG_E__PB2,  ADC_DEVICES_2,  ADC_Channel_12 }, // ADC2
+    { DEFIO_TAG_E__PB12, ADC_DEVICES_4,  ADC_Channel_3  }, // ADC4
+    { DEFIO_TAG_E__PB13, ADC_DEVICES_3,  ADC_Channel_5  }, // ADC3
+    { DEFIO_TAG_E__PB14, ADC_DEVICES_4,  ADC_Channel_4  }, // ADC4
+    { DEFIO_TAG_E__PB15, ADC_DEVICES_4,  ADC_Channel_5  }, // ADC4
+    { DEFIO_TAG_E__PC0,  ADC_DEVICES_12, ADC_Channel_6  }, // ADC12
+    { DEFIO_TAG_E__PC1,  ADC_DEVICES_12, ADC_Channel_7  }, // ADC12
+    { DEFIO_TAG_E__PC2,  ADC_DEVICES_12, ADC_Channel_8  }, // ADC12
+    { DEFIO_TAG_E__PC3,  ADC_DEVICES_12, ADC_Channel_9  }, // ADC12
+    { DEFIO_TAG_E__PC4,  ADC_DEVICES_2,  ADC_Channel_5  }, // ADC2
+    { DEFIO_TAG_E__PC5,  ADC_DEVICES_2,  ADC_Channel_11 }, // ADC2
+    { DEFIO_TAG_E__PD8,  ADC_DEVICES_4,  ADC_Channel_12 }, // ADC4
+    { DEFIO_TAG_E__PD9,  ADC_DEVICES_4,  ADC_Channel_13 }, // ADC4
+    { DEFIO_TAG_E__PD10, ADC_DEVICES_34, ADC_Channel_7  }, // ADC34
+    { DEFIO_TAG_E__PD11, ADC_DEVICES_34, ADC_Channel_8  }, // ADC34
+    { DEFIO_TAG_E__PD12, ADC_DEVICES_34, ADC_Channel_9  }, // ADC34
+    { DEFIO_TAG_E__PD13, ADC_DEVICES_34, ADC_Channel_10 }, // ADC34
+    { DEFIO_TAG_E__PD14, ADC_DEVICES_34, ADC_Channel_11 }, // ADC34
+    { DEFIO_TAG_E__PE7,  ADC_DEVICES_3,  ADC_Channel_13 }, // ADC3
+    { DEFIO_TAG_E__PE8,  ADC_DEVICES_34, ADC_Channel_6  }, // ADC34
+    { DEFIO_TAG_E__PE9,  ADC_DEVICES_3,  ADC_Channel_2  }, // ADC3
+    { DEFIO_TAG_E__PE10, ADC_DEVICES_3,  ADC_Channel_14 }, // ADC3
+    { DEFIO_TAG_E__PE11, ADC_DEVICES_3,  ADC_Channel_15 }, // ADC3
+    { DEFIO_TAG_E__PE12, ADC_DEVICES_3,  ADC_Channel_16 }, // ADC3
+    { DEFIO_TAG_E__PE13, ADC_DEVICES_3,  ADC_Channel_3  }, // ADC3
+    { DEFIO_TAG_E__PE14, ADC_DEVICES_4,  ADC_Channel_1  }, // ADC4
+    { DEFIO_TAG_E__PE15, ADC_DEVICES_4,  ADC_Channel_2  }, // ADC4
+    { DEFIO_TAG_E__PF2,  ADC_DEVICES_12, ADC_Channel_10 }, // ADC12
+    { DEFIO_TAG_E__PF4,  ADC_DEVICES_1,  ADC_Channel_5  }, // ADC1
 };
-
-ADCDevice adcDeviceByInstance(ADC_TypeDef *instance)
-{
-    if (instance == ADC1)
-        return ADCDEV_1;
-
-    if (instance == ADC2)
-        return ADCDEV_2;
-
-    if (instance == ADC3)
-        return ADCDEV_3;
-
-    return ADCINVALID;
-}
 
 void adcInit(const adcConfig_t *config)
 {
@@ -139,8 +129,9 @@ void adcInit(const adcConfig_t *config)
 
     bool adcActive = false;
     for (int i = 0; i < ADC_CHANNEL_COUNT; i++) {
-        if (!adcOperatingConfig[i].tag)
+        if (!adcVerifyPin(adcOperatingConfig[i].tag, device)) {
             continue;
+        }
 
         adcActive = true;
         IOInit(IOGetByTag(adcOperatingConfig[i].tag), OWNER_ADC_BATT + i, 0);
@@ -236,3 +227,4 @@ void adcInit(const adcConfig_t *config)
 
     ADC_StartConversion(adc.ADCx);
 }
+#endif

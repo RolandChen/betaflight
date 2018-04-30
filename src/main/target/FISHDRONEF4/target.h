@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -24,7 +27,8 @@
 #define LED0_PIN                PC13
 #define LED1_PIN                PC14
 
-#define BEEPER                  PC15
+#define USE_BEEPER
+#define BEEPER_PIN              PC15
 #define BEEPER_INVERTED
 
 #define INVERTER_PIN_UART6      PC8
@@ -40,18 +44,18 @@
 #define MPU6500_CS_PIN          PA4
 #define MPU6500_SPI_INSTANCE    SPI1
 
-#define GYRO
+#define USE_GYRO
 #define USE_GYRO_SPI_MPU6500
 #define GYRO_MPU6500_ALIGN      CW90_DEG
 
-#define ACC
+#define USE_ACC
 #define USE_ACC_SPI_MPU6500
 #define ACC_MPU6500_ALIGN       CW90_DEG
 
 // *************** UART *****************************
 #define USE_VCP
-#define VBUS_SENSING_PIN        PA8
-#define VBUS_SENSING_ENABLED
+#define USB_DETECT_PIN          PA8
+#define USE_USB_DETECT
 
 #define USE_UART1
 #define UART1_RX_PIN            PA10
@@ -80,7 +84,6 @@
 #define SPI2_MISO_PIN       PC2
 #define SPI2_MOSI_PIN       PC3
 
-#define OSD
 #define USE_MAX7456
 #define MAX7456_SPI_INSTANCE    SPI2
 #define MAX7456_SPI_CS_PIN      SPI2_NSS_PIN
@@ -111,16 +114,14 @@
 #define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4 // 21MHz
 
 #define SDCARD_DMA_CHANNEL_TX               DMA1_Stream5
-#define SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG DMA_FLAG_TCIF5
-#define SDCARD_DMA_CLK                      RCC_AHB1Periph_DMA1
-#define SDCARD_DMA_CHANNEL                  DMA_Channel_0
+#define SDCARD_DMA_CHANNEL                  0
 
 // *************** RTC6705 *************************
-#define VTX_RTC6705
-#define VTX_RTC6705SOFTSPI
-#define RTC6705_SPILE_PIN       PB3
+#define USE_VTX_RTC6705
+#define USE_VTX_RTC6705_SOFTSPI
 #define RTC6705_SPICLK_PIN      PB4
-#define RTC6705_SPIDATA_PIN     PB5
+#define RTC6705_SPI_MOSI_PIN    PB5
+#define RTC6705_CS_PIN          PB3
 
 // *************** ADC *****************************
 #define USE_ADC

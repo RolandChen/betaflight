@@ -1,24 +1,30 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "platform.h"
+
+#ifdef USE_GYRO_L3GD20
+
 #include "build/build_config.h"
 #include "build/debug.h"
 
@@ -76,10 +82,12 @@ static void l3gd20SpiInit(SPI_TypeDef *SPIx)
     UNUSED(SPIx); // FIXME
 
     mpul3gd20CsPin = IOGetByTag(IO_TAG(L3GD20_CS_PIN));
+#ifndef USE_DUAL_GYRO
     IOInit(mpul3gd20CsPin, OWNER_MPU_CS, 0);
     IOConfigGPIO(mpul3gd20CsPin, SPI_IO_CS_CFG);
 
     DISABLE_L3GD20;
+#endif
 
     spiSetDivisor(L3GD20_SPI, SPI_CLOCK_STANDARD);
 }
@@ -159,3 +167,5 @@ bool l3gd20Detect(gyroDev_t *gyro)
 
     return true;  // blindly assume it's present, for now.
 }
+
+#endif // USE_GYRO_L3GD20

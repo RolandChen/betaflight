@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -20,7 +23,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "config/parameter_group.h"
+#include "pg/pg.h"
 #include "drivers/serial.h"
 
 typedef enum {
@@ -33,7 +36,7 @@ typedef enum {
     FUNCTION_NONE                = 0,
     FUNCTION_MSP                 = (1 << 0),  // 1
     FUNCTION_GPS                 = (1 << 1),  // 2
-    FUNCTION_TELEMETRY_FRSKY     = (1 << 2),  // 4
+    FUNCTION_TELEMETRY_FRSKY_HUB = (1 << 2),  // 4
     FUNCTION_TELEMETRY_HOTT      = (1 << 3),  // 8
     FUNCTION_TELEMETRY_LTM       = (1 << 4),  // 16
     FUNCTION_TELEMETRY_SMARTPORT = (1 << 5),  // 32
@@ -44,7 +47,8 @@ typedef enum {
     FUNCTION_VTX_SMARTAUDIO      = (1 << 11), // 2048
     FUNCTION_TELEMETRY_IBUS      = (1 << 12), // 4096
     FUNCTION_VTX_TRAMP           = (1 << 13), // 8192
-    FUNCTION_RCSPLIT             = (1 << 14), // 16384
+    FUNCTION_RCDEVICE            = (1 << 14), // 16384
+    FUNCTION_LIDAR_TF            = (1 << 15), // 32768
 } serialPortFunction_e;
 
 typedef enum {
@@ -150,6 +154,7 @@ serialPort_t *openSerialPort(
     serialPortIdentifier_e identifier,
     serialPortFunction_e function,
     serialReceiveCallbackPtr rxCallback,
+    void *rxCallbackData,
     uint32_t baudrate,
     portMode_e mode,
     portOptions_e options
@@ -164,5 +169,4 @@ baudRate_e lookupBaudRateIndex(uint32_t baudRate);
 //
 // msp/cli/bootloader
 //
-void serialEvaluateNonMspData(serialPort_t *serialPort, uint8_t receivedChar);
 void serialPassthrough(serialPort_t *left, serialPort_t *right, serialConsumer *leftC, serialConsumer *rightC);

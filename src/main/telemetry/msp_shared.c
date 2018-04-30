@@ -1,7 +1,25 @@
+/*
+ * This file is part of Cleanflight and Betaflight.
+ *
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
 #include "platform.h"
@@ -12,13 +30,9 @@
 
 #include "common/utils.h"
 
-#include "fc/fc_msp.h"
+#include "interface/msp.h"
 
-#include "msp/msp.h"
-
-#include "rx/crsf.h"
-#include "rx/msp.h"
-
+#include "telemetry/crsf.h"
 #include "telemetry/msp_shared.h"
 #include "telemetry/smartport.h"
 
@@ -35,9 +49,6 @@ enum {
     TELEMETRY_MSP_CRC_ERROR=1,
     TELEMETRY_MSP_ERROR=2
 };
-
-#define REQUEST_BUFFER_SIZE 64
-#define RESPONSE_BUFFER_SIZE 64
 
 STATIC_UNIT_TESTED uint8_t checksum = 0;
 STATIC_UNIT_TESTED mspPackage_t mspPackage;
@@ -87,7 +98,7 @@ void sendMspErrorResponse(uint8_t error, int16_t cmd)
     sbufSwitchToReader(&mspPackage.responsePacket->buf, mspPackage.responseBuffer);
 }
 
-bool handleMspFrame(uint8_t *frameStart, uint8_t *frameEnd)
+bool handleMspFrame(uint8_t *frameStart, int frameLength)
 {
     static uint8_t mspStarted = 0;
     static uint8_t lastSeq = 0;
@@ -101,7 +112,7 @@ bool handleMspFrame(uint8_t *frameStart, uint8_t *frameEnd)
     }
 
     mspPacket_t *packet = mspPackage.requestPacket;
-    sbuf_t *frameBuf = sbufInit(&mspPackage.requestFrame, frameStart, frameEnd);
+    sbuf_t *frameBuf = sbufInit(&mspPackage.requestFrame, frameStart, frameStart + (uint8_t)frameLength);
     sbuf_t *rxBuf = &mspPackage.requestPacket->buf;
     const uint8_t header = sbufReadU8(frameBuf);
     const uint8_t seqNumber = header & TELEMETRY_MSP_SEQ_MASK;
@@ -141,6 +152,7 @@ bool handleMspFrame(uint8_t *frameStart, uint8_t *frameEnd)
         sbufAdvance(frameBuf, frameBytesRemaining);
         sbufWriteData(rxBuf, payload, frameBytesRemaining);
         lastSeq = seqNumber;
+
         return false;
     } else {
         sbufReadData(frameBuf, payload, bufferBytesRemaining);

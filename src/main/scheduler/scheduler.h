@@ -1,23 +1,31 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
 #include "common/time.h"
+
+#define TASK_PERIOD_HZ(hz) (1000000 / (hz))
+#define TASK_PERIOD_MS(ms) ((ms) * 1000)
+#define TASK_PERIOD_US(us) (us)
+
 
 typedef enum {
     TASK_PRIORITY_IDLE = 0,     // Disables dynamic scheduling, task is executed only if no other task is active this cycle
@@ -59,40 +67,40 @@ typedef enum {
     TASK_BATTERY_VOLTAGE,
     TASK_BATTERY_CURRENT,
     TASK_BATTERY_ALERTS,
-#ifdef BEEPER
+#ifdef USE_BEEPER
     TASK_BEEPER,
 #endif
-#ifdef GPS
+#ifdef USE_GPS
     TASK_GPS,
 #endif
-#ifdef MAG
+#ifdef USE_MAG
     TASK_COMPASS,
 #endif
-#ifdef BARO
+#ifdef USE_BARO
     TASK_BARO,
 #endif
-#ifdef SONAR
-    TASK_SONAR,
+#ifdef USE_RANGEFINDER
+    TASK_RANGEFINDER,
 #endif
-#if defined(BARO) || defined(SONAR)
+#if defined(USE_BARO) || defined(USE_RANGEFINDER)
     TASK_ALTITUDE,
 #endif
 #ifdef USE_DASHBOARD
     TASK_DASHBOARD,
 #endif
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
     TASK_TELEMETRY,
 #endif
-#ifdef LED_STRIP
+#ifdef USE_LED_STRIP
     TASK_LEDSTRIP,
 #endif
-#ifdef TRANSPONDER
+#ifdef USE_TRANSPONDER
     TASK_TRANSPONDER,
 #endif
 #ifdef STACK_CHECK
     TASK_STACK_CHECK,
 #endif
-#ifdef OSD
+#ifdef USE_OSD
     TASK_OSD,
 #endif
 #ifdef USE_OSD_SLAVE
@@ -104,18 +112,26 @@ typedef enum {
 #ifdef USE_ESC_SENSOR
     TASK_ESC_SENSOR,
 #endif
-#ifdef CMS
+#ifdef USE_CMS
     TASK_CMS,
 #endif
-#ifdef VTX_CONTROL
+#ifdef USE_VTX_CONTROL
     TASK_VTXCTRL,
 #endif
 #ifdef USE_CAMERA_CONTROL
     TASK_CAMCTRL,
 #endif
 
-#ifdef USE_RCSPLIT
-    TASK_RCSPLIT,
+#ifdef USE_RCDEVICE
+    TASK_RCDEVICE,
+#endif
+
+#ifdef USE_ADC_INTERNAL
+    TASK_ADC_INTERNAL,
+#endif
+
+#ifdef USE_PINIOBOX
+    TASK_PINIOBOX,
 #endif
 
     /* Count of real tasks */

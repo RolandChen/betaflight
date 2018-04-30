@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stddef.h>
@@ -21,12 +24,12 @@
 
 #include "platform.h"
 
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
 
 #include "common/utils.h"
 
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
+#include "pg/pg.h"
+#include "pg/pg_ids.h"
 
 #include "drivers/timer.h"
 #include "drivers/serial.h"
@@ -43,7 +46,7 @@
 #include "rx/rx.h"
 
 #include "telemetry/telemetry.h"
-#include "telemetry/frsky.h"
+#include "telemetry/frsky_hub.h"
 #include "telemetry/hott.h"
 #include "telemetry/smartport.h"
 #include "telemetry/ltm.h"
@@ -54,8 +57,7 @@
 #include "telemetry/ibus.h"
 #include "telemetry/msp_shared.h"
 
-
-PG_REGISTER_WITH_RESET_TEMPLATE(telemetryConfig_t, telemetryConfig, PG_TELEMETRY_CONFIG, 0);
+PG_REGISTER_WITH_RESET_TEMPLATE(telemetryConfig_t, telemetryConfig, PG_TELEMETRY_CONFIG, 1);
 
 PG_RESET_TEMPLATE(telemetryConfig_t, telemetryConfig,
     .telemetry_inverted = false,
@@ -66,43 +68,48 @@ PG_RESET_TEMPLATE(telemetryConfig_t, telemetryConfig,
     .frsky_coordinate_format = FRSKY_FORMAT_DMS,
     .frsky_unit = FRSKY_UNIT_METRICS,
     .frsky_vfas_precision = 0,
-    .frsky_vfas_cell_voltage = 0,
     .hottAlarmSoundInterval = 5,
     .pidValuesAsTelemetry = 0,
-    .report_cell_voltage = false
+    .report_cell_voltage = false,
+    .flysky_sensors = {
+            IBUS_SENSOR_TYPE_TEMPERATURE,
+            IBUS_SENSOR_TYPE_RPM_FLYSKY,
+            IBUS_SENSOR_TYPE_EXTERNAL_VOLTAGE
+    }
 );
 
 void telemetryInit(void)
 {
-#ifdef TELEMETRY_FRSKY
-    initFrSkyTelemetry();
+#ifdef USE_TELEMETRY_FRSKY_HUB
+    initFrSkyHubTelemetry();
 #endif
-#ifdef TELEMETRY_HOTT
+#ifdef USE_TELEMETRY_HOTT
     initHoTTTelemetry();
 #endif
-#ifdef TELEMETRY_SMARTPORT
+#ifdef USE_TELEMETRY_SMARTPORT
     initSmartPortTelemetry();
 #endif
-#ifdef TELEMETRY_LTM
+#ifdef USE_TELEMETRY_LTM
     initLtmTelemetry();
 #endif
-#ifdef TELEMETRY_JETIEXBUS
+#ifdef USE_TELEMETRY_JETIEXBUS
     initJetiExBusTelemetry();
 #endif
-#ifdef TELEMETRY_MAVLINK
+#ifdef USE_TELEMETRY_MAVLINK
     initMAVLinkTelemetry();
 #endif
-#ifdef TELEMETRY_CRSF
+#ifdef USE_TELEMETRY_CRSF
     initCrsfTelemetry();
 #endif
-#ifdef TELEMETRY_SRXL
+#ifdef USE_TELEMETRY_SRXL
     initSrxlTelemetry();
 #endif
-#ifdef TELEMETRY_IBUS
+#ifdef USE_TELEMETRY_IBUS
     initIbusTelemetry();
 #endif
 #if defined(USE_MSP_OVER_TELEMETRY)
     initSharedMsp();
+    initCrsfMspBuffer();
 #endif
 
     telemetryCheckState();
@@ -124,10 +131,19 @@ bool telemetryDetermineEnabledState(portSharing_e portSharing)
 
 bool telemetryCheckRxPortShared(const serialPortConfig_t *portConfig)
 {
-    if (portConfig->functionMask & FUNCTION_RX_SERIAL && portConfig->functionMask & TELEMETRY_SHAREABLE_PORT_FUNCTIONS_MASK) {
+    if (portConfig->functionMask & FUNCTION_RX_SERIAL && portConfig->functionMask & TELEMETRY_SHAREABLE_PORT_FUNCTIONS_MASK &&
+        (rxConfig()->serialrx_provider == SERIALRX_SPEKTRUM1024 ||
+        rxConfig()->serialrx_provider == SERIALRX_SPEKTRUM2048 ||
+        rxConfig()->serialrx_provider == SERIALRX_SBUS ||
+        rxConfig()->serialrx_provider == SERIALRX_SUMD ||
+        rxConfig()->serialrx_provider == SERIALRX_SUMH ||
+        rxConfig()->serialrx_provider == SERIALRX_XBUS_MODE_B ||
+        rxConfig()->serialrx_provider == SERIALRX_XBUS_MODE_B_RJ01 ||
+        rxConfig()->serialrx_provider == SERIALRX_IBUS)) {
+
         return true;
     }
-#ifdef TELEMETRY_IBUS
+#ifdef USE_TELEMETRY_IBUS
     if (   portConfig->functionMask & FUNCTION_TELEMETRY_IBUS
         && portConfig->functionMask & FUNCTION_RX_SERIAL
         && rxConfig()->serialrx_provider == SERIALRX_IBUS) {
@@ -142,75 +158,75 @@ serialPort_t *telemetrySharedPort = NULL;
 
 void telemetryCheckState(void)
 {
-#ifdef TELEMETRY_FRSKY
-    checkFrSkyTelemetryState();
+#ifdef USE_TELEMETRY_FRSKY_HUB
+    checkFrSkyHubTelemetryState();
 #endif
-#ifdef TELEMETRY_HOTT
+#ifdef USE_TELEMETRY_HOTT
     checkHoTTTelemetryState();
 #endif
-#ifdef TELEMETRY_SMARTPORT
+#ifdef USE_TELEMETRY_SMARTPORT
     checkSmartPortTelemetryState();
 #endif
-#ifdef TELEMETRY_LTM
+#ifdef USE_TELEMETRY_LTM
     checkLtmTelemetryState();
 #endif
-#ifdef TELEMETRY_JETIEXBUS
+#ifdef USE_TELEMETRY_JETIEXBUS
     checkJetiExBusTelemetryState();
 #endif
-#ifdef TELEMETRY_MAVLINK
+#ifdef USE_TELEMETRY_MAVLINK
     checkMAVLinkTelemetryState();
 #endif
-#ifdef TELEMETRY_CRSF
+#ifdef USE_TELEMETRY_CRSF
     checkCrsfTelemetryState();
 #endif
-#ifdef TELEMETRY_SRXL
+#ifdef USE_TELEMETRY_SRXL
     checkSrxlTelemetryState();
 #endif
-#ifdef TELEMETRY_IBUS
+#ifdef USE_TELEMETRY_IBUS
     checkIbusTelemetryState();
 #endif
 }
 
 void telemetryProcess(uint32_t currentTime)
 {
-#ifdef TELEMETRY_FRSKY
-    handleFrSkyTelemetry();
+#ifdef USE_TELEMETRY_FRSKY_HUB
+    handleFrSkyHubTelemetry(currentTime);
+#else
+    UNUSED(currentTime);
 #endif
-#ifdef TELEMETRY_HOTT
+#ifdef USE_TELEMETRY_HOTT
     handleHoTTTelemetry(currentTime);
 #else
     UNUSED(currentTime);
 #endif
-#ifdef TELEMETRY_SMARTPORT
+#ifdef USE_TELEMETRY_SMARTPORT
     handleSmartPortTelemetry();
 #endif
-#ifdef TELEMETRY_LTM
+#ifdef USE_TELEMETRY_LTM
     handleLtmTelemetry();
 #endif
-#ifdef TELEMETRY_JETIEXBUS
+#ifdef USE_TELEMETRY_JETIEXBUS
     handleJetiExBusTelemetry();
 #endif
-#ifdef TELEMETRY_MAVLINK
+#ifdef USE_TELEMETRY_MAVLINK
     handleMAVLinkTelemetry();
 #endif
-#ifdef TELEMETRY_CRSF
+#ifdef USE_TELEMETRY_CRSF
     handleCrsfTelemetry(currentTime);
 #endif
-#ifdef TELEMETRY_SRXL
+#ifdef USE_TELEMETRY_SRXL
     handleSrxlTelemetry(currentTime);
 #endif
-#ifdef TELEMETRY_IBUS
+#ifdef USE_TELEMETRY_IBUS
     handleIbusTelemetry();
 #endif
 }
 
-#define TELEMETRY_FUNCTION_MASK (FUNCTION_TELEMETRY_FRSKY | FUNCTION_TELEMETRY_HOTT | FUNCTION_TELEMETRY_LTM | FUNCTION_TELEMETRY_SMARTPORT)
-
 void releaseSharedTelemetryPorts(void) {
-    serialPort_t *sharedPort = findSharedSerialPort(TELEMETRY_FUNCTION_MASK, FUNCTION_MSP);
+    serialPort_t *sharedPort = findSharedSerialPort(TELEMETRY_PORT_FUNCTIONS_MASK, FUNCTION_MSP);
     while (sharedPort) {
         mspSerialReleasePortIfAllocated(sharedPort);
-        sharedPort = findNextSharedSerialPort(TELEMETRY_FUNCTION_MASK, FUNCTION_MSP);
+        sharedPort = findNextSharedSerialPort(TELEMETRY_PORT_FUNCTIONS_MASK, FUNCTION_MSP);
     }
 }
 #endif

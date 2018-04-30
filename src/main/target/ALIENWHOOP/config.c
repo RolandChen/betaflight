@@ -1,20 +1,22 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 /*
 
@@ -37,7 +39,7 @@
 
 #include <platform.h>
 
-#ifdef TARGET_CONFIG
+#ifdef USE_TARGET_CONFIG
 
 #include "fc/rc_modes.h"
 #include "common/axis.h"
@@ -67,7 +69,7 @@ void targetConfiguration(void)
 {
     if (hardwareMotorType == MOTOR_BRUSHED) {
         motorConfigMutable()->dev.motorPwmRate = BRUSHED_MOTORS_PWM_RATE;
-        motorConfigMutable()->minthrottle = 1080;
+        motorConfigMutable()->minthrottle = 1020;
         motorConfigMutable()->maxthrottle = 2000;
     }
 
@@ -76,10 +78,8 @@ void targetConfiguration(void)
     rxConfigMutable()->spektrum_sat_bind = 5;
     rxConfigMutable()->spektrum_sat_bind_autoreset = 1;
     parseRcChannels("TAER1234", rxConfigMutable());
-#if defined(ALIENWHOOPF4)
-    rxConfigMutable()->sbus_inversion = 0; // TODO: what to do about F4 inversion?
-#else
-    rxConfigMutable()->sbus_inversion = 1; // invert on F7
+#if defined(ALIENWHOOPF7)
+    rxConfigMutable()->serialrx_inverted = true;
 #endif
 
     beeperOffSet((BEEPER_BAT_CRIT_LOW | BEEPER_BAT_LOW | BEEPER_RX_SET) ^ BEEPER_GYRO_CALIBRATED);
@@ -93,16 +93,17 @@ void targetConfiguration(void)
     barometerConfigMutable()->baro_hardware = BARO_NONE;
 #endif
 
-    compassConfigMutable()->mag_hardware =  MAG_DEFAULT;
+    compassConfigMutable()->mag_hardware =  MAG_NONE;
 
-    /* F4 (especially overclocked) and F7 ALIENWHOOP perform splendidly with 32kHz gyro enabled */
-    gyroConfigMutable()->gyro_use_32khz = 1;
+    /* Default to 32kHz enabled at 16/16 */
+    gyroConfigMutable()->gyro_use_32khz = 1; // enable 32kHz sampling
+    gyroConfigMutable()->gyroMovementCalibrationThreshold = 200; // aka moron_threshold
     gyroConfigMutable()->gyro_sync_denom = 2;  // 16kHz gyro
     pidConfigMutable()->pid_process_denom = 1; // 16kHz PID
 
     featureSet((FEATURE_DYNAMIC_FILTER | FEATURE_AIRMODE | FEATURE_ANTI_GRAVITY) ^ FEATURE_RX_PARALLEL_PWM);
 
-    /* AlienWhoop PIDs based on Ole Gravy Leg (aka Matt Williamson's) PIDs 
+    /* AlienWhoop PIDs based on Ole Gravy Leg (aka Matt Williamson's) PIDs
      */
     for (uint8_t pidProfileIndex = 0; pidProfileIndex < MAX_PROFILE_COUNT; pidProfileIndex++) {
         pidProfile_t *pidProfile = pidProfilesMutable(pidProfileIndex);
@@ -122,7 +123,7 @@ void targetConfiguration(void)
 
         /* Setpoints */
         pidProfile->dtermSetpointWeight = 100;
-        pidProfile->setpointRelaxRatio = 100; // default to snappy for racers
+        pidProfile->setpointRelaxRatio = 100;
 
         /* Throttle PID Attenuation (TPA) */
         pidProfile->itermThrottleThreshold = 400;
@@ -132,9 +133,11 @@ void targetConfiguration(void)
         controlRateConfig_t *controlRateConfig = controlRateProfilesMutable(rateProfileIndex);
 
         /* RC Rates */
-        controlRateConfig->rcRate8 = 100;
-        controlRateConfig->rcYawRate8 = 100;
-        controlRateConfig->rcExpo8 = 0;
+        controlRateConfig->rcRates[FD_ROLL] = 100;
+        controlRateConfig->rcRates[FD_PITCH] = 100;
+        controlRateConfig->rcRates[FD_YAW] = 100;
+        controlRateConfig->rcExpo[FD_ROLL] = 0;
+        controlRateConfig->rcExpo[FD_PITCH] = 0;
 
         /* Super Expo Rates */
         controlRateConfig->rates[FD_ROLL] = 80;
@@ -143,7 +146,7 @@ void targetConfiguration(void)
 
         /* Throttle PID Attenuation (TPA) */
         controlRateConfig->dynThrPID = 0; // tpa_rate off
-        controlRateConfig->tpa_breakpoint = 1600;
+        controlRateConfig->tpa_breakpoint = 1650;
     }
 }
 #endif

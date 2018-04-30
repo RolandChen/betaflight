@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "stdbool.h"
@@ -29,12 +32,17 @@
 
 #include "drivers/adc.h"
 
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
+#include "pg/pg.h"
+#include "pg/pg_ids.h"
 #include "config/config_reset.h"
 
+#include "sensors/adcinternal.h"
 #include "sensors/voltage.h"
 #include "sensors/esc_sensor.h"
+
+const char * const voltageMeterSourceNames[VOLTAGE_METER_COUNT] = {
+    "NONE", "ADC", "ESC"
+};
 
 const uint8_t voltageMeterIds[] = {
     VOLTAGE_METER_ID_BATTERY_1,
@@ -138,15 +146,16 @@ STATIC_UNIT_TESTED uint16_t voltageAdcToVoltage(const uint16_t src, const voltag
 {
     // calculate battery voltage based on ADC reading
     // result is Vbatt in 0.1V steps. 3.3V = ADC Vref, 0xFFF = 12bit adc, 110 = 10:1 voltage divider (10k:1k) * 10 for 0.1V
-    return ((((uint32_t)src * config->vbatscale * 33 + (0xFFF * 5)) / (0xFFF * config->vbatresdivval)) / config->vbatresdivmultiplier);
+    return ((((uint32_t)src * config->vbatscale * getVrefMv() / 100 + (0xFFF * 5)) / (0xFFF * config->vbatresdivval)) / config->vbatresdivmultiplier);
 }
 
 void voltageMeterADCRefresh(void)
 {
     for (uint8_t i = 0; i < MAX_VOLTAGE_SENSOR_ADC && i < ARRAYLEN(voltageMeterAdcChannelMap); i++) {
+        voltageMeterADCState_t *state = &voltageMeterADCStates[i];
+#ifdef USE_ADC
         // store the battery voltage with some other recent battery voltage readings
 
-        voltageMeterADCState_t *state = &voltageMeterADCStates[i];
         const voltageSensorADCConfig_t *config = voltageSensorADCConfig(i);
 
         uint8_t channel = voltageMeterAdcChannelMap[i];
@@ -157,6 +166,12 @@ void voltageMeterADCRefresh(void)
         // always calculate the latest voltage, see getLatestVoltage() which does the calculation on demand.
         state->voltageFiltered = voltageAdcToVoltage(filteredSample, config);
         state->voltageUnfiltered = voltageAdcToVoltage(rawSample, config);
+#else
+        UNUSED(voltageAdcToVoltage);
+
+        state->voltageFiltered = 0;
+        state->voltageUnfiltered = 0;
+#endif
     }
 }
 
@@ -208,8 +223,10 @@ void voltageMeterESCRefresh(void)
 {
 #ifdef USE_ESC_SENSOR
     escSensorData_t *escData = getEscSensorData(ESC_SENSOR_COMBINED);
-    voltageMeterESCState.voltageUnfiltered = escData->dataAge <= ESC_BATTERY_AGE_MAX ? escData->voltage / 10 : 0;
-    voltageMeterESCState.voltageFiltered = biquadFilterApply(&voltageMeterESCState.filter, voltageMeterESCState.voltageUnfiltered);
+    if (escData) {
+        voltageMeterESCState.voltageUnfiltered = escData->dataAge <= ESC_BATTERY_AGE_MAX ? escData->voltage / 10 : 0;
+        voltageMeterESCState.voltageFiltered = biquadFilterApply(&voltageMeterESCState.filter, voltageMeterESCState.voltageUnfiltered);
+    }
 #endif
 }
 

@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
@@ -96,24 +99,31 @@ typedef struct timerHardware_s {
 #if defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
     uint8_t alternateFunction;
 #endif
-#if defined(USE_DSHOT) || defined(LED_STRIP) || defined(TRANSPONDER)
+#if defined(USE_DSHOT) || defined(USE_LED_STRIP) || defined(USE_TRANSPONDER)
 #if defined(STM32F4) || defined(STM32F7)
     DMA_Stream_TypeDef *dmaRef;
     uint32_t dmaChannel;
-#elif defined(STM32F3) || defined(STM32F1)
+#else
     DMA_Channel_TypeDef *dmaRef;
 #endif
     uint8_t dmaIrqHandler;
+#if defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+    // TIMUP
+#ifdef STM32F3
+    DMA_Channel_TypeDef *dmaTimUPRef;
+#else
+    DMA_Stream_TypeDef *dmaTimUPRef;
+    uint32_t dmaTimUPChannel;
+#endif
+    uint8_t dmaTimUPIrqHandler;
+#endif
 #endif
 } timerHardware_t;
 
 typedef enum {
-    TIMER_OUTPUT_NONE      = 0x00,
-    TIMER_INPUT_ENABLED    = 0x01, /* TODO: remove this */
-    TIMER_OUTPUT_ENABLED   = 0x01, /* TODO: remove this */
-    TIMER_OUTPUT_STANDARD  = 0x01,
-    TIMER_OUTPUT_INVERTED  = 0x02,
-    TIMER_OUTPUT_N_CHANNEL = 0x04
+    TIMER_OUTPUT_NONE      = 0,
+    TIMER_OUTPUT_INVERTED  = (1 << 0),
+    TIMER_OUTPUT_N_CHANNEL = (1 << 1),
 } timerFlag_e;
 
 #ifdef STM32F1
@@ -193,6 +203,9 @@ const timerHardware_t *timerGetByTag(ioTag_t tag, timerUsageFlag_e flag);
 
 #if defined(USE_HAL_DRIVER)
 TIM_HandleTypeDef* timerFindTimerHandle(TIM_TypeDef *tim);
+HAL_StatusTypeDef TIM_DMACmd(TIM_HandleTypeDef *htim, uint32_t Channel, FunctionalState NewState);
+HAL_StatusTypeDef DMA_SetCurrDataCounter(TIM_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length);
+uint16_t timerDmaIndex(uint8_t channel);
 #else
 void timerOCInit(TIM_TypeDef *tim, uint8_t channel, TIM_OCInitTypeDef *init);
 void timerOCPreloadConfig(TIM_TypeDef *tim, uint8_t channel, uint16_t preload);
@@ -204,3 +217,6 @@ uint16_t timerDmaSource(uint8_t channel);
 uint16_t timerGetPrescalerByDesiredHertz(TIM_TypeDef *tim, uint32_t hz);
 uint16_t timerGetPrescalerByDesiredMhz(TIM_TypeDef *tim, uint16_t mhz);
 uint16_t timerGetPeriodByPrescaler(TIM_TypeDef *tim, uint16_t prescaler, uint32_t hz);
+
+int8_t timerGetTIMNumber(const TIM_TypeDef *tim);
+uint8_t timerLookupChannelIndex(const uint16_t channel);

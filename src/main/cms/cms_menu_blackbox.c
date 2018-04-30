@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 //
@@ -26,7 +29,7 @@
 
 #include "platform.h"
 
-#if defined(CMS) && defined(BLACKBOX)
+#if defined(USE_CMS) && defined(USE_BLACKBOX)
 
 #include "build/version.h"
 
@@ -41,16 +44,18 @@
 #include "common/utils.h"
 
 #include "config/feature.h"
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
 
+#include "drivers/flash.h"
 #include "drivers/time.h"
+#include "drivers/sdcard.h"
 
 #include "fc/config.h"
 
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/flashfs.h"
 #include "io/beeper.h"
+
+#include "pg/pg.h"
 
 static const char * const cmsx_BlackboxDeviceNames[] = {
     "NONE",
@@ -59,7 +64,7 @@ static const char * const cmsx_BlackboxDeviceNames[] = {
     "SERIAL"
 };
 
-static uint16_t blackboxConfig_p_denom;
+static uint16_t blackboxConfig_p_ratio;
 
 static uint8_t cmsx_BlackboxDevice;
 static OSD_TAB_t cmsx_BlackboxDeviceTable = { &cmsx_BlackboxDevice, 2, cmsx_BlackboxDeviceNames };
@@ -170,7 +175,7 @@ static long cmsx_Blackbox_onEnter(void)
     cmsx_Blackbox_GetDeviceStatus();
     cmsx_BlackboxDevice = blackboxConfig()->device;
 
-    blackboxConfig_p_denom = blackboxConfig()->p_denom;
+    blackboxConfig_p_ratio = blackboxConfig()->p_ratio;
     return 0;
 }
 
@@ -182,12 +187,7 @@ static long cmsx_Blackbox_onExit(const OSD_Entry *self)
         blackboxConfigMutable()->device = cmsx_BlackboxDevice;
         blackboxValidateConfig();
     }
-    blackboxConfigMutable()->p_denom = blackboxConfig_p_denom;
-    return 0;
-}
-
-static long cmsx_Blackbox_FeatureWriteback(void)
-{
+    blackboxConfigMutable()->p_ratio = blackboxConfig_p_ratio;
     return 0;
 }
 
@@ -198,7 +198,7 @@ static OSD_Entry cmsx_menuBlackboxEntries[] =
     { "(STATUS)",    OME_String,  NULL,            &cmsx_BlackboxStatus,                                      0 },
     { "(USED)",      OME_String,  NULL,            &cmsx_BlackboxDeviceStorageUsed,                           0 },
     { "(FREE)",      OME_String,  NULL,            &cmsx_BlackboxDeviceStorageFree,                           0 },
-    { "P DENOM",     OME_UINT16,  NULL,            &(OSD_UINT16_t){ &blackboxConfig_p_denom, 1, INT16_MAX, 1 },0 },
+    { "P RATIO",     OME_UINT16,  NULL,            &(OSD_UINT16_t){ &blackboxConfig_p_ratio, 1, INT16_MAX, 1 },0 },
 
 #ifdef USE_FLASHFS
     { "ERASE FLASH", OME_Funcall, cmsx_EraseFlash, NULL,                                                      0 },
@@ -209,11 +209,12 @@ static OSD_Entry cmsx_menuBlackboxEntries[] =
 };
 
 CMS_Menu cmsx_menuBlackbox = {
+#ifdef CMS_MENU_DEBUG
     .GUARD_text = "MENUBB",
     .GUARD_type = OME_MENU,
+#endif
     .onEnter = cmsx_Blackbox_onEnter,
     .onExit = cmsx_Blackbox_onExit,
-    .onGlobalExit = cmsx_Blackbox_FeatureWriteback,
     .entries = cmsx_menuBlackboxEntries
 };
 

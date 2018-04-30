@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -41,14 +44,14 @@
 #include "drivers/serial_uart.h"
 #include "drivers/serial_uart_impl.h"
 
-void uartSetBaudRate(serialPort_t *instance, uint32_t baudRate)
+static void uartSetBaudRate(serialPort_t *instance, uint32_t baudRate)
 {
     uartPort_t *uartPort = (uartPort_t *)instance;
     uartPort->port.baudRate = baudRate;
     uartReconfigure(uartPort);
 }
 
-void uartSetMode(serialPort_t *instance, portMode_e mode)
+static void uartSetMode(serialPort_t *instance, portMode_e mode)
 {
     uartPort_t *uartPort = (uartPort_t *)instance;
     uartPort->port.mode = mode;
@@ -138,7 +141,7 @@ void uartTryStartTxDMA(uartPort_t *s)
     }
 }
 
-uint32_t uartTotalRxBytesWaiting(const serialPort_t *instance)
+static uint32_t uartTotalRxBytesWaiting(const serialPort_t *instance)
 {
     const uartPort_t *s = (const uartPort_t*)instance;
 #ifdef STM32F4
@@ -162,7 +165,7 @@ uint32_t uartTotalRxBytesWaiting(const serialPort_t *instance)
     }
 }
 
-uint32_t uartTotalTxBytesFree(const serialPort_t *instance)
+static uint32_t uartTotalTxBytesFree(const serialPort_t *instance)
 {
     const uartPort_t *s = (const uartPort_t*)instance;
 
@@ -205,7 +208,7 @@ uint32_t uartTotalTxBytesFree(const serialPort_t *instance)
     return (s->port.txBufferSize - 1) - bytesUsed;
 }
 
-bool isUartTransmitBufferEmpty(const serialPort_t *instance)
+static bool isUartTransmitBufferEmpty(const serialPort_t *instance)
 {
     const uartPort_t *s = (const uartPort_t *)instance;
 #ifdef STM32F4
@@ -218,7 +221,7 @@ bool isUartTransmitBufferEmpty(const serialPort_t *instance)
         return s->port.txBufferTail == s->port.txBufferHead;
 }
 
-uint8_t uartRead(serialPort_t *instance)
+static uint8_t uartRead(serialPort_t *instance)
 {
     uint8_t ch;
     uartPort_t *s = (uartPort_t *)instance;
@@ -243,7 +246,7 @@ uint8_t uartRead(serialPort_t *instance)
     return ch;
 }
 
-void uartWrite(serialPort_t *instance, uint8_t ch)
+static void uartWrite(serialPort_t *instance, uint8_t ch)
 {
     uartPort_t *s = (uartPort_t *)instance;
     s->port.txBuffer[s->port.txBufferHead] = ch;
@@ -274,6 +277,8 @@ const struct serialPortVTable uartVTable[] = {
         .serialSetBaudRate = uartSetBaudRate,
         .isSerialTransmitBufferEmpty = isUartTransmitBufferEmpty,
         .setMode = uartSetMode,
+        .setCtrlLineStateCb = NULL,
+        .setBaudRateCb = NULL,
         .writeBuf = NULL,
         .beginWrite = NULL,
         .endWrite = NULL,

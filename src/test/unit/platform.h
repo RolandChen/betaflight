@@ -25,15 +25,20 @@
 #define U_ID_1 1
 #define U_ID_2 2
 
+#define NOINLINE
+#define FAST_CODE
+#define FAST_RAM
+#define FAST_RAM_INITIALIZED
+
 #define MAX_PROFILE_COUNT 3
-#define MAG
-#define BARO
-#define GPS
+#define USE_MAG
+#define USE_BARO
+#define USE_GPS
 #define USE_DASHBOARD
-#define TELEMETRY
-#define LED_STRIP
+#define USE_TELEMETRY
+#define USE_LED_STRIP
 #define USE_SERVOS
-#define TRANSPONDER
+#define USE_TRANSPONDER
 
 typedef enum
 {
@@ -92,7 +97,13 @@ typedef struct
     void *test;
 } I2C_TypeDef;
 
+typedef struct
+{
+    void* test;
+} ADC_TypeDef;
+
 #define WS2811_DMA_TC_FLAG (void *)1
 #define WS2811_DMA_HANDLER_IDENTIFER 0
+#define NVIC_PriorityGroup_2 0x500
 
 #include "target.h"

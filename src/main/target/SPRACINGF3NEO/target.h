@@ -1,57 +1,63 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
 #define TARGET_BOARD_IDENTIFIER "SP3N"
-#define TARGET_CONFIG
+#define USE_TARGET_CONFIG
+
+//Making it fit into flash:
+#undef USE_RTC_TIME
+#undef USE_COPY_PROFILE_CMS_MENU
+#undef USE_RX_MSP
+#undef USE_ESC_SENSOR_INFO
+#undef USE_CRSF_CMS_TELEMETRY
+
+
+#undef USE_COPY_PROFILE_CMS_MENU
 
 #define CONFIG_FASTLOOP_PREFERRED_ACC ACC_DEFAULT
 
 #define LED0_PIN                PB9
 #define LED1_PIN                PB2
 
-#define BEEPER                  PC15
+#define USE_BEEPER
+#define BEEPER_PIN              PC15
 #define BEEPER_INVERTED
 
-#define USE_EXTI
-#define MPU_INT_EXTI            PC13
-#define USE_MPU_DATA_READY_SIGNAL
-#define ENSURE_MPU_DATA_READY_IS_LOW
+//#define USE_EXTI
+//#define MPU_INT_EXTI            PC13
+//#define USE_MPU_DATA_READY_SIGNAL
+//#define ENSURE_MPU_DATA_READY_IS_LOW
 
 #define USE_MAG_DATA_READY_SIGNAL
 #define ENSURE_MAG_DATA_READY_IS_HIGH
 
-#define GYRO
+#define USE_GYRO
 #define USE_GYRO_SPI_MPU6500
 
-#define ACC
+#define USE_ACC
 #define USE_ACC_SPI_MPU6500
 
 #define ACC_MPU6500_ALIGN       CW0_DEG
 #define GYRO_MPU6500_ALIGN      CW0_DEG
-
-#define BARO
-#define USE_BARO_BMP280
-#define USE_BARO_MS5611
-
-#define MAG
-#define USE_MAG_AK8975
-#define USE_MAG_HMC5883
 
 #define USE_VCP
 #define USE_UART1
@@ -100,11 +106,8 @@
 #define SPI3_MISO_PIN           PB4
 #define SPI3_MOSI_PIN           PB5
 
-#define VTX_RTC6705
+#define USE_VTX_RTC6705
 #define VTX_RTC6705_OPTIONAL    // VTX/OSD board is OPTIONAL
-
-#undef VTX_SMARTAUDIO           // Disabled due to flash size
-#undef VTX_TRAMP                // Disabled due to flash size
 
 #define RTC6705_CS_PIN          PF4
 #define RTC6705_SPI_INSTANCE    SPI3
@@ -138,7 +141,6 @@
 
 // Note, this is the same DMA channel as UART1_RX. Luckily we don't use DMA for USART Rx.
 #define SDCARD_DMA_CHANNEL_TX               DMA1_Channel5
-#define SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG DMA1_FLAG_TC5
 
 #define MPU6500_CS_PIN                   SPI1_NSS_PIN
 #define MPU6500_SPI_INSTANCE             SPI1
@@ -163,24 +165,19 @@
 #define WS2811_DMA_HANDLER_IDENTIFER    DMA1_CH2_HANDLER
 #define WS2811_TIMER_GPIO_AF            GPIO_AF_6
 
-#define TRANSPONDER
+#define USE_TRANSPONDER
 
 #define ENABLE_BLACKBOX_LOGGING_ON_SDCARD_BY_DEFAULT
 
-#define OSD
+#define USE_OSD
 
 #define DEFAULT_RX_FEATURE                  FEATURE_RX_SERIAL
 #define DEFAULT_FEATURES                    (FEATURE_TRANSPONDER | FEATURE_RSSI_ADC | FEATURE_TELEMETRY | FEATURE_OSD | FEATURE_LED_STRIP)
 
-#define GPS_UART                            SERIAL_PORT_USART3
-
 #define SERIALRX_UART                       SERIAL_PORT_USART2
 #define SERIALRX_PROVIDER                   SERIALRX_SBUS
 
-#define TELEMETRY_UART                      SERIAL_PORT_UART5
-#define TELEMETRY_PROVIDER_DEFAULT          FUNCTION_TELEMETRY_SMARTPORT
-
-#define BUTTONS // Physically located on the optional OSD/VTX board.
+#define USE_BUTTONS // Physically located on the optional OSD/VTX board.
 #define BUTTON_A_PIN                        PD2
 
 // FIXME While it's possible to use the button on the OSD/VTX board for binding enabling it here will break binding unless you have the OSD/VTX connected.

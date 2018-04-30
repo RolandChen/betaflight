@@ -1,19 +1,24 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
+
+// NOTE: This gyro is considered obsolete and may be removed in the future.
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -60,23 +65,9 @@ static void l3g4200dInit(gyroDev_t *gyro)
 {
     bool ack;
 
-    uint8_t mpuLowPassFilter = L3G4200D_DLPF_32HZ;
-
-    switch (gyro->lpf) {
-        default:
-            case 32:
-            mpuLowPassFilter = L3G4200D_DLPF_32HZ;
-            break;
-        case 54:
-            mpuLowPassFilter = L3G4200D_DLPF_54HZ;
-            break;
-        case 78:
-            mpuLowPassFilter = L3G4200D_DLPF_78HZ;
-            break;
-        case 93:
-            mpuLowPassFilter = L3G4200D_DLPF_93HZ;
-            break;
-    }
+    // Removed lowpass filter selection and just default to 32Hz regardless of gyro->hardware_lpf
+    // The previous selection was broken anyway as the old gyro->lpf values ranged from 0-7 and
+    // the switch statement would have always taken the default and used L3G4200D_DLPF_32HZ
 
     delay(100);
 
@@ -85,7 +76,9 @@ static void l3g4200dInit(gyroDev_t *gyro)
         failureMode(FAILURE_ACC_INIT);
 
     delay(5);
-    i2cWrite(MPU_I2C_INSTANCE, L3G4200D_ADDRESS, L3G4200D_CTRL_REG1, L3G4200D_POWER_ON | mpuLowPassFilter);
+    i2cWrite(MPU_I2C_INSTANCE, L3G4200D_ADDRESS, L3G4200D_CTRL_REG1, L3G4200D_POWER_ON | L3G4200D_DLPF_32HZ);
+
+    UNUSED(gyro);
 }
 
 // Read 3 gyro values into user-provided buffer. No overrun checking is done.

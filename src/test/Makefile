@@ -12,7 +12,9 @@
 # Where to find user code.
 USER_DIR = ../main
 TEST_DIR = unit
+ROOT = ../..
 
+include $(ROOT)/make/system-id.mk
 
 # specify which files that are included in the test in addition to the unittest file.
 # variables available:
@@ -49,7 +51,6 @@ baro_bmp280_unittest_SRC := \
 		$(USER_DIR)/drivers/barometer/barometer_bmp280.c
 
 baro_bmp280_unittest_DEFINES := \
-                USE_BARO \
                 USE_BARO_BMP280 \
                 USE_BARO_SPI_BMP280
 
@@ -57,7 +58,6 @@ baro_ms5611_unittest_SRC := \
 		$(USER_DIR)/drivers/barometer/barometer_ms5611.c
 
 baro_ms5611_unittest_DEFINES := \
-                USE_BARO \
                 USE_BARO_MS5611 \
                 USE_BARO_SPI_MS5611
 
@@ -74,7 +74,7 @@ blackbox_unittest_SRC :=  \
 		$(USER_DIR)/common/printf.c \
 		$(USER_DIR)/common/maths.c \
 		$(USER_DIR)/common/typeconversion.c \
-		$(USER_DIR)/drivers/gyro_sync.c
+		$(USER_DIR)/drivers/accgyro/gyro_sync.c
 
 blackbox_encoding_unittest_SRC :=  \
 		$(USER_DIR)/blackbox/blackbox_encoding.c \
@@ -83,15 +83,15 @@ blackbox_encoding_unittest_SRC :=  \
 		$(USER_DIR)/common/typeconversion.c
 
 cli_unittest_SRC := \
-		$(USER_DIR)/fc/cli.c \
+		$(USER_DIR)/interface/cli.c \
 		$(USER_DIR)/config/feature.c \
-		$(USER_DIR)/config/parameter_group.c \
+		$(USER_DIR)/pg/pg.c \
                 $(USER_DIR)/common/typeconversion.c
 
 cli_unittest_DEFINES := \
+		USE_OSD \
 		USE_CLI \
-		SystemCoreClock=1000000 \
-		OSD
+		SystemCoreClock=1000000
 
 cms_unittest_SRC := \
 		$(USER_DIR)/cms/cms.c \
@@ -100,7 +100,8 @@ cms_unittest_SRC := \
 
 
 common_filter_unittest_SRC := \
-		$(USER_DIR)/common/filter.c
+		$(USER_DIR)/common/filter.c \
+		$(USER_DIR)/common/maths.c
 
 
 encoding_unittest_SRC := \
@@ -154,19 +155,22 @@ osd_unittest_SRC := \
 		$(USER_DIR)/drivers/display.c \
 		$(USER_DIR)/common/maths.c \
 		$(USER_DIR)/common/printf.c \
+		$(USER_DIR)/common/time.c \
 		$(USER_DIR)/fc/runtime_config.c
 
 osd_unittest_DEFINES := \
-		OSD
+		USE_OSD \
+		USE_RTC_TIME \
+		USE_ADC_INTERNAL
 
 
-parameter_groups_unittest_SRC := \
-		$(USER_DIR)/config/parameter_group.c
+pg_unittest_SRC := \
+		$(USER_DIR)/pg/pg.c
 
 
 rc_controls_unittest_SRC := \
 		$(USER_DIR)/fc/rc_controls.c \
-		$(USER_DIR)/config/parameter_group.c \
+		$(USER_DIR)/pg/pg.c \
 		$(USER_DIR)/common/bitarray.c \
 		$(USER_DIR)/common/maths.c \
 		$(USER_DIR)/fc/rc_adjustments.c \
@@ -207,6 +211,16 @@ scheduler_unittest_SRC := \
 		$(USER_DIR)/common/streambuf.c
 
 
+sensor_gyro_unittest_SRC := \
+		$(USER_DIR)/sensors/gyro.c \
+		$(USER_DIR)/sensors/boardalignment.c \
+		$(USER_DIR)/build/debug.c \
+		$(USER_DIR)/common/filter.c \
+		$(USER_DIR)/common/maths.c \
+		$(USER_DIR)/drivers/accgyro/accgyro_fake.c \
+		$(USER_DIR)/drivers/accgyro/gyro_sync.c \
+		$(USER_DIR)/pg/pg.c
+
 telemetry_crsf_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
 		$(USER_DIR)/telemetry/crsf.c \
@@ -227,6 +241,7 @@ telemetry_crsf_unittest_DEFINES := \
 
 telemetry_crsf_msp_unittest_SRC := \
 		$(USER_DIR)/rx/crsf.c \
+		$(USER_DIR)/build/atomic.c \
 		$(USER_DIR)/common/crc.c \
 		$(USER_DIR)/common/streambuf.c \
 		$(USER_DIR)/common/printf.c \
@@ -264,15 +279,6 @@ type_conversion_unittest_SRC := \
 ws2811_unittest_SRC := \
 		$(USER_DIR)/drivers/light_ws2811strip.c
 
-rcsplit_unittest_SRC := \
-		$(USER_DIR)/common/bitarray.c \
-		$(USER_DIR)/fc/rc_modes.c \
-		$(USER_DIR)/io/rcsplit.c
-
-rcsplit_unitest_DEFINES := \
-		USE_UART3 \
-		USE_RCSPLIT \
-
 huffman_unittest_SRC := \
 		$(USER_DIR)/common/huffman.c \
 		$(USER_DIR)/common/huffman_table.c
@@ -280,8 +286,24 @@ huffman_unittest_SRC := \
 huffman_unittest_DEFINES := \
 		USE_HUFFMAN
 
-ringbuffer_unittest_SRC := \
-		$(USER_DIR)/common/ringbuffer.c
+rcdevice_unittest_SRC := \
+		$(USER_DIR)/common/crc.c \
+		$(USER_DIR)/common/bitarray.c \
+		$(USER_DIR)/fc/rc_modes.c \
+		$(USER_DIR)/io/rcdevice.c \
+		$(USER_DIR)/io/rcdevice_osd.c \
+		$(USER_DIR)/io/rcdevice_cam.c \
+
+pid_unittest_SRC :=  \
+		$(USER_DIR)/common/filter.c \
+		$(USER_DIR)/common/maths.c \
+		$(USER_DIR)/drivers/accgyro/gyro_sync.c \
+		$(USER_DIR)/flight/pid.c \
+		$(USER_DIR)/pg/pg.c \
+		$(USER_DIR)/fc/runtime_config.c
+
+rcdevice_unittest_DEFINES := \
+		USE_RCDEVICE
 
 # Please tweak the following variable definitions as needed by your
 # project, except GTEST_HEADERS, which you can use in your own targets
@@ -295,9 +317,6 @@ GTEST_DIR = ../../lib/test/gtest
 USER_INCLUDE_DIR = $(USER_DIR)
 
 OBJECT_DIR = ../../obj/test
-
-# Determine the OS
-UNAME := $(shell uname -s)
 
 # Use clang/clang++ by default
 CC  := clang
@@ -321,7 +340,7 @@ COMMON_FLAGS += -fblocks
 LDFLAGS	     += -lBlocksRuntime
 endif
 
-ifneq ($(UNAME), Darwin)
+ifndef MACOSX
 COMMON_FLAGS += -pthread
 endif
 
@@ -339,11 +358,13 @@ COVERAGE_FLAGS := --coverage
 C_FLAGS   += $(COVERAGE_FLAGS)
 CXX_FLAGS += $(COVERAGE_FLAGS)
 
+C_FLAGS   += -D_GNU_SOURCE
+
 # Set up the parameter group linker flags according to OS
-ifeq ($(UNAME), Darwin)
+ifdef MACOSX
 LDFLAGS  += -Wl,-map,$(OBJECT_DIR)/$@.map
 else
-LDFLAGS  += -Wl,-T,$(TEST_DIR)/parameter_group.ld -Wl,-Map,$(OBJECT_DIR)/$@.map
+LDFLAGS  += -Wl,-T,$(TEST_DIR)/pg.ld -Wl,-Map,$(OBJECT_DIR)/$@.map
 endif
 
 # Gather up all of the tests.

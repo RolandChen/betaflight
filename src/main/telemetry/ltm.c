@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -33,7 +36,7 @@
 
 #include "platform.h"
 
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
 
 #include "build/build_config.h"
 
@@ -70,7 +73,6 @@
 #include "flight/imu.h"
 #include "flight/failsafe.h"
 #include "flight/altitude.h"
-#include "flight/navigation.h"
 
 #include "telemetry/telemetry.h"
 #include "telemetry/ltm.h"
@@ -124,7 +126,7 @@ static void ltm_finalise(void)
  */
 static void ltm_gframe(void)
 {
-#if defined(GPS)
+#if defined(USE_GPS)
     uint8_t gps_fix_type = 0;
     int32_t ltm_alt;
 
@@ -143,8 +145,8 @@ static void ltm_gframe(void)
     ltm_serialise_32(gpsSol.llh.lon);
     ltm_serialise_8((uint8_t)(gpsSol.groundSpeed / 100));
 
-#if defined(BARO) || defined(SONAR)
-    ltm_alt = (sensors(SENSOR_SONAR) || sensors(SENSOR_BARO)) ? getEstimatedAltitude() : gpsSol.llh.alt * 100;
+#if defined(USE_BARO) || defined(USE_RANGEFINDER)
+    ltm_alt = (sensors(SENSOR_RANGEFINDER) || sensors(SENSOR_BARO)) ? getEstimatedAltitude() : gpsSol.llh.alt * 100;
 #else
     ltm_alt = gpsSol.llh.alt * 100;
 #endif
@@ -192,7 +194,7 @@ static void ltm_sframe(void)
     ltm_initialise_packet('S');
     ltm_serialise_16(getBatteryVoltage() * 100);    //vbat converted to mv
     ltm_serialise_16(0);             //  current, not implemented
-    ltm_serialise_8((uint8_t)((rssi * 254) / 1023));        // scaled RSSI (uchar)
+    ltm_serialise_8((uint8_t)((getRssi() * 254) / 1023));        // scaled RSSI (uchar)
     ltm_serialise_8(0);              // no airspeed
     ltm_serialise_8((lt_flightmode << 2) | lt_statemode);
     ltm_finalise();
@@ -219,7 +221,7 @@ static void ltm_aframe(void)
 static void ltm_oframe(void)
 {
     ltm_initialise_packet('O');
-#if defined(GPS)
+#if defined(USE_GPS)
     ltm_serialise_32(GPS_home[LAT]);
     ltm_serialise_32(GPS_home[LON]);
 #else
@@ -283,7 +285,7 @@ void configureLtmTelemetryPort(void)
     if (baudRateIndex == BAUD_AUTO) {
         baudRateIndex = BAUD_19200;
     }
-    ltmPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_LTM, NULL, baudRates[baudRateIndex], TELEMETRY_LTM_INITIAL_PORT_MODE, telemetryConfig()->telemetry_inverted ? SERIAL_INVERTED : SERIAL_NOT_INVERTED);
+    ltmPort = openSerialPort(portConfig->identifier, FUNCTION_TELEMETRY_LTM, NULL, NULL, baudRates[baudRateIndex], TELEMETRY_LTM_INITIAL_PORT_MODE, telemetryConfig()->telemetry_inverted ? SERIAL_INVERTED : SERIAL_NOT_INVERTED);
     if (!ltmPort)
         return;
     ltmEnabled = true;

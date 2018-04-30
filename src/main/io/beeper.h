@@ -1,24 +1,27 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
 #include "common/time.h"
-#include "config/parameter_group.h"
+#include "pg/pg.h"
 
 typedef enum {
     // IMPORTANT: these are in priority order, 0 = Highest
@@ -43,20 +46,13 @@ typedef enum {
     BEEPER_SYSTEM_INIT,             // Initialisation beeps when board is powered on
     BEEPER_USB,                     // Some boards have beeper powered USB connected
     BEEPER_BLACKBOX_ERASE,          // Beep when blackbox erase completes
+    BEEPER_CRASH_FLIP_MODE,         // Crash flip mode is active
+    BEEPER_CAM_CONNECTION_OPEN,     // When the 5 key simulation stated
+    BEEPER_CAM_CONNECTION_CLOSE,    // When the 5 key simulation stop
     BEEPER_ALL,                     // Turn ON or OFF all beeper conditions
-    BEEPER_PREFERENCE               // Save preferred beeper configuration
+    BEEPER_PREFERENCE,              // Save preferred beeper configuration
     // BEEPER_ALL and BEEPER_PREFERENCE must remain at the bottom of this enum
 } beeperMode_e;
-
-typedef struct beeperConfig_s {
-    uint32_t beeper_off_flags;
-    uint32_t preferred_beeper_off_flags;
-    uint8_t dshotBeaconTone;
-} beeperConfig_t;
-
-#ifdef BEEPER
-PG_DECLARE(beeperConfig_t, beeperConfig);
-#endif
 
 void beeper(beeperMode_e mode);
 void beeperSilence(void);

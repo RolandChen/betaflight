@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -24,16 +27,19 @@
 
 #include "common/utils.h"
 
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
-
 #include "drivers/display.h"
 #include "drivers/max7456.h"
-#include "drivers/vcd.h"
+
+#include "fc/config.h"
 
 #include "io/displayport_max7456.h"
 #include "io/osd.h"
 #include "io/osd_slave.h"
+
+#include "pg/max7456.h"
+#include "pg/pg.h"
+#include "pg/pg_ids.h"
+#include "pg/vcd.h"
 
 displayPort_t max7456DisplayPort;
 
@@ -54,7 +60,7 @@ static int grab(displayPort_t *displayPort)
 {
     // FIXME this should probably not have a dependency on the OSD or OSD slave code
     UNUSED(displayPort);
-#ifdef OSD
+#ifdef USE_OSD
     osdResetAlarms();
     resumeRefreshAt = 0;
 #endif
@@ -117,6 +123,12 @@ static bool isTransferInProgress(const displayPort_t *displayPort)
     return max7456DmaInProgress();
 }
 
+static bool isSynced(const displayPort_t *displayPort)
+{
+    UNUSED(displayPort);
+    return max7456BuffersSynced();
+}
+
 static void resync(displayPort_t *displayPort)
 {
     UNUSED(displayPort);
@@ -148,13 +160,18 @@ static const displayPortVTable_t max7456VTable = {
     .isTransferInProgress = isTransferInProgress,
     .heartbeat = heartbeat,
     .resync = resync,
+    .isSynced = isSynced,
     .txBytesFree = txBytesFree,
 };
 
 displayPort_t *max7456DisplayPortInit(const vcdProfile_t *vcdProfile)
 {
     displayInit(&max7456DisplayPort, &max7456VTable);
-    max7456Init(vcdProfile);
+#ifdef USE_OSD_SLAVE
+    max7456Init(max7456Config(), vcdProfile, false);
+#else
+    max7456Init(max7456Config(), vcdProfile, systemConfig()->cpu_overclock);
+#endif
     resync(&max7456DisplayPort);
     return &max7456DisplayPort;
 }

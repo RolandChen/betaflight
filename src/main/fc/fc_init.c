@@ -1,23 +1,27 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include "platform.h"
 
@@ -30,55 +34,72 @@
 
 #include "config/config_eeprom.h"
 #include "config/feature.h"
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
 
 #include "cms/cms.h"
 #include "cms/cms_types.h"
 
-#include "drivers/nvic.h"
-#include "drivers/sensor.h"
-#include "drivers/system.h"
-#include "drivers/time.h"
-#include "drivers/dma.h"
-#include "drivers/io.h"
-#include "drivers/light_led.h"
-#include "drivers/sound_beeper.h"
-#include "drivers/timer.h"
-#include "drivers/serial.h"
-#include "drivers/serial_softserial.h"
-#include "drivers/serial_uart.h"
 #include "drivers/accgyro/accgyro.h"
+#include "drivers/camera_control.h"
 #include "drivers/compass/compass.h"
 #include "drivers/pwm_esc_detect.h"
-#include "drivers/rx_pwm.h"
 #include "drivers/pwm_output.h"
 #include "drivers/adc.h"
 #include "drivers/bus.h"
 #include "drivers/bus_i2c.h"
 #include "drivers/bus_spi.h"
 #include "drivers/buttons.h"
+#include "drivers/camera_control.h"
+#include "drivers/compass/compass.h"
+#include "drivers/dma.h"
+#include "drivers/exti.h"
+#include "drivers/flash.h"
 #include "drivers/inverter.h"
-#include "drivers/flash_m25p16.h"
-#include "drivers/sonar_hcsr04.h"
+#include "drivers/io.h"
+#include "drivers/light_led.h"
+#include "drivers/nvic.h"
+#include "drivers/pwm_esc_detect.h"
+#include "drivers/pwm_output.h"
+#include "drivers/rx/rx_pwm.h"
+#include "drivers/sensor.h"
+#include "drivers/serial.h"
+#include "drivers/serial_softserial.h"
+#include "drivers/serial_uart.h"
 #include "drivers/sdcard.h"
-#include "drivers/usb_io.h"
+#include "drivers/sound_beeper.h"
+#include "drivers/system.h"
+#include "drivers/time.h"
+#include "drivers/timer.h"
 #include "drivers/transponder_ir.h"
 #include "drivers/exti.h"
-#include "drivers/max7456.h"
+#include "drivers/usb_io.h"
 #include "drivers/vtx_rtc6705.h"
 #include "drivers/vtx_common.h"
-#include "drivers/camera_control.h"
+#ifdef USE_USB_MSC
+#include "drivers/usb_msc.h"
+#endif
 
 #include "fc/config.h"
 #include "fc/fc_init.h"
-#include "fc/fc_msp.h"
 #include "fc/fc_tasks.h"
 #include "fc/rc_controls.h"
 #include "fc/runtime_config.h"
-#include "fc/cli.h"
+
+#include "interface/cli.h"
+#include "interface/msp.h"
 
 #include "msp/msp_serial.h"
+
+#include "pg/adc.h"
+#include "pg/beeper_dev.h"
+#include "pg/bus_i2c.h"
+#include "pg/bus_spi.h"
+#include "pg/flash.h"
+#include "pg/pinio.h"
+#include "pg/piniobox.h"
+#include "pg/pg.h"
+#include "pg/rx_pwm.h"
+#include "pg/sdcard.h"
+#include "pg/vcd.h"
 
 #include "rx/rx.h"
 #include "rx/rx_spi.h"
@@ -86,6 +107,9 @@
 
 #include "io/beeper.h"
 #include "io/displayport_max7456.h"
+#include "io/displayport_rcdevice.h"
+#include "io/displayport_srxl.h"
+#include "io/displayport_crsf.h"
 #include "io/serial.h"
 #include "io/flashfs.h"
 #include "io/gps.h"
@@ -98,7 +122,10 @@
 #include "io/transponder_ir.h"
 #include "io/osd.h"
 #include "io/osd_slave.h"
+#include "io/pidaudio.h"
+#include "io/piniobox.h"
 #include "io/displayport_msp.h"
+#include "io/vtx.h"
 #include "io/vtx_rtc6705.h"
 #include "io/vtx_control.h"
 #include "io/vtx_smartaudio.h"
@@ -115,7 +142,6 @@
 #include "sensors/gyro.h"
 #include "sensors/initialisation.h"
 #include "sensors/sensors.h"
-#include "sensors/sonar.h"
 
 #include "telemetry/telemetry.h"
 
@@ -126,7 +152,7 @@
 #include "flight/pid.h"
 #include "flight/servos.h"
 
-#include "io/rcsplit.h"
+#include "io/rcdevice_cam.h"
 
 #ifdef USE_HARDWARE_REVISION_DETECTION
 #include "hardware_revision.h"
@@ -158,18 +184,6 @@ void processLoopback(void)
 #endif
 }
 
-#ifdef VTX_RTC6705
-bool canUpdateVTX(void)
-{
-#if defined(MAX7456_SPI_INSTANCE) && defined(RTC6705_SPI_INSTANCE) && defined(SPI_SHARED_MAX7456_AND_RTC6705)
-    if (feature(FEATURE_OSD)) {
-        return !max7456DmaInProgress();
-    }
-#endif
-    return true;
-}
-#endif
-
 #ifdef BUS_SWITCH_PIN
 void busSwitchInit(void)
 {
@@ -191,49 +205,58 @@ static IO_t busSwitchResetPin        = IO_NONE;
 
 void spiPreInit(void)
 {
-#ifdef USE_ACC_SPI_MPU6000
+#ifdef GYRO_1_CS_PIN
+    spiPreInitCs(IO_TAG(GYRO_1_CS_PIN));
+#endif
+#ifdef GYRO_2_CS_PIN
+    spiPreInitCs(IO_TAG(GYRO_2_CS_PIN));
+#endif
+#ifdef MPU6000_CS_PIN
     spiPreInitCs(IO_TAG(MPU6000_CS_PIN));
 #endif
-#ifdef USE_ACC_SPI_MPU6500
+#ifdef MPU6500_CS_PIN
     spiPreInitCs(IO_TAG(MPU6500_CS_PIN));
 #endif
-#ifdef USE_GYRO_SPI_MPU9250
+#ifdef MPU9250_CS_PIN
     spiPreInitCs(IO_TAG(MPU9250_CS_PIN));
 #endif
-#ifdef USE_GYRO_SPI_ICM20649
+#ifdef ICM20649_CS_PIN
     spiPreInitCs(IO_TAG(ICM20649_CS_PIN));
 #endif
-#ifdef USE_GYRO_SPI_ICM20689
+#ifdef ICM20689_CS_PIN
     spiPreInitCs(IO_TAG(ICM20689_CS_PIN));
 #endif
-#ifdef USE_ACCGYRO_BMI160
+#ifdef BMI160_CS_PIN
     spiPreInitCs(IO_TAG(BMI160_CS_PIN));
 #endif
-#ifdef USE_GYRO_L3GD20
+#ifdef L3GD20_CS_PIN
     spiPreInitCs(IO_TAG(L3GD20_CS_PIN));
 #endif
-#ifdef USE_MAX7456
+#ifdef MAX7456_SPI_CS_PIN
     spiPreInitCsOutPU(IO_TAG(MAX7456_SPI_CS_PIN)); // XXX 3.2 workaround for Kakute F4. See comment for spiPreInitCSOutPU.
 #endif
 #ifdef USE_SDCARD
-    spiPreInitCs(IO_TAG(SDCARD_SPI_CS_PIN));
+    spiPreInitCs(sdcardConfig()->chipSelectTag);
 #endif
-#ifdef USE_BARO_SPI_BMP280
+#ifdef BMP280_CS_PIN
     spiPreInitCs(IO_TAG(BMP280_CS_PIN));
 #endif
-#ifdef USE_BARO_SPI_MS5611
+#ifdef MS5611_CS_PIN
     spiPreInitCs(IO_TAG(MS5611_CS_PIN));
 #endif
-#ifdef USE_MAG_SPI_HMC5883
+#ifdef LPS_CS_PIN
+    spiPreInitCs(IO_TAG(LPS_CS_PIN));
+#endif
+#ifdef HMC5883_CS_PIN
     spiPreInitCs(IO_TAG(HMC5883_CS_PIN));
 #endif
-#ifdef USE_MAG_SPI_AK8963
+#ifdef AK8963_CS_PIN
     spiPreInitCs(IO_TAG(AK8963_CS_PIN));
 #endif
-#ifdef RTC6705_CS_PIN // XXX VTX_RTC6705? Should use USE_ format.
+#if defined(RTC6705_CS_PIN) && !defined(USE_VTX_RTC6705_SOFTSPI) // RTC6705 soft SPI initialisation handled elsewhere.
     spiPreInitCs(IO_TAG(RTC6705_CS_PIN));
 #endif
-#ifdef USE_FLASH_M25P16
+#ifdef M25P16_CS_PIN
     spiPreInitCs(IO_TAG(M25P16_CS_PIN));
 #endif
 #if defined(USE_RX_SPI) && !defined(USE_RX_SOFTSPI)
@@ -244,6 +267,22 @@ void spiPreInit(void)
 
 void init(void)
 {
+#ifdef USE_ITCM_RAM
+    /* Load functions into ITCM RAM */
+    extern uint8_t tcm_code_start;
+    extern uint8_t tcm_code_end;
+    extern uint8_t tcm_code;
+    memcpy(&tcm_code_start, &tcm_code, (size_t) (&tcm_code_end - &tcm_code_start));
+#endif
+
+#ifdef USE_FAST_RAM
+    /* Load FAST_RAM_INITIALIZED variable intializers into FAST RAM */
+    extern uint8_t _sfastram_data;
+    extern uint8_t _efastram_data;
+    extern uint8_t _sfastram_idata;
+    memcpy(&_sfastram_data, &_sfastram_idata, (size_t) (&_efastram_data - &_sfastram_data));
+#endif
+
 #ifdef USE_HAL_DRIVER
     HAL_Init();
 #endif
@@ -259,7 +298,7 @@ void init(void)
     detectHardwareRevision();
 #endif
 
-#ifdef BRUSHED_ESC_AUTODETECT
+#ifdef USE_BRUSHED_ESC_AUTODETECT
     detectBrushedESC();
 #endif
 
@@ -268,9 +307,9 @@ void init(void)
     ensureEEPROMContainsValidData();
     readEEPROM();
 
-    /* TODO: Check to be removed when moving to generic targets */
+    // !!TODO: Check to be removed when moving to generic targets
     if (strncasecmp(systemConfig()->boardIdentifier, TARGET_BOARD_IDENTIFIER, sizeof(TARGET_BOARD_IDENTIFIER))) {
-       resetEEPROM();
+        resetEEPROM();
     }
 
     systemState |= SYSTEM_STATE_CONFIG_LOADED;
@@ -295,7 +334,7 @@ void init(void)
     EXTIInit();
 #endif
 
-#if defined(BUTTONS)
+#if defined(USE_BUTTONS)
 
     buttonsInit();
 
@@ -337,18 +376,8 @@ void init(void)
     }
 #endif
 
-#if defined(STM32F4) && !defined(DISABLE_OVERCLOCK)
-    // If F4 Overclocking is set and System core clock is not correct a reset is forced
-    if (systemConfig()->cpu_overclock && SystemCoreClock != OC_FREQUENCY_HZ) {
-        *((uint32_t *)0x2001FFF8) = 0xBABEFACE; // 128KB SRAM STM32F4XX
-        __disable_irq();
-        NVIC_SystemReset();
-    } else if (!systemConfig()->cpu_overclock && SystemCoreClock == OC_FREQUENCY_HZ) {
-        *((uint32_t *)0x2001FFF8) = 0x0;        // 128KB SRAM STM32F4XX
-        __disable_irq();
-        NVIC_SystemReset();
-    }
-
+#ifdef USE_OVERCLOCK
+    OverclockRebootIfNecessary(systemConfig()->cpu_overclock);
 #endif
 
     delay(100);
@@ -376,6 +405,23 @@ void init(void)
     serialInit(feature(FEATURE_SOFTSERIAL), SERIAL_PORT_NONE);
 #endif
 
+    mixerInit(mixerConfig()->mixerMode);
+    mixerConfigureOutput();
+
+    uint16_t idlePulse = motorConfig()->mincommand;
+    if (feature(FEATURE_3D)) {
+        idlePulse = flight3DConfig()->neutral3d;
+    }
+    if (motorConfig()->dev.motorPwmProtocol == PWM_TYPE_BRUSHED) {
+        featureClear(FEATURE_3D);
+        idlePulse = 0; // brushed motors
+    }
+    /* Motors needs to be initialized soon as posible because hardware initialization
+     * may send spurious pulses to esc's causing their early initialization. Also ppm
+     * receiver may share timer with motors so motors MUST be initialized here. */
+    motorDevInit(&motorConfig()->dev, idlePulse, getMotorCount());
+    systemState |= SYSTEM_STATE_MOTORS_READY;
+
     if (0) {}
 #if defined(USE_PPM)
     else if (feature(FEATURE_RX_PPM)) {
@@ -388,7 +434,7 @@ void init(void)
     }
 #endif
 
-#ifdef BEEPER
+#ifdef USE_BEEPER
     beeperInit(beeperDevConfig());
 #endif
 /* temp until PGs are implemented. */
@@ -401,7 +447,7 @@ void init(void)
 #else
 
 #ifdef USE_SPI
-    spiPinConfigure();
+    spiPinConfigure(spiPinConfig());
 
     // Initialize CS lines and keep them high
     spiPreInit();
@@ -418,10 +464,23 @@ void init(void)
 #ifdef USE_SPI_DEVICE_4
     spiInit(SPIDEV_4);
 #endif
-#endif /* USE_SPI */
+#endif // USE_SPI
+
+#ifdef USE_USB_MSC
+/* MSC mode will start after init, but will not allow scheduler to run,
+ *  so there is no bottleneck in reading and writing data */
+    mscInit();
+    if (mscCheckBoot() || mscCheckButton()) {
+        if (mscStart() == 0) {
+             mscWaitForButton();
+        } else {
+             NVIC_SystemReset();
+        }
+    }
+#endif
 
 #ifdef USE_I2C
-    i2cHardwareConfigure();
+    i2cHardwareConfigure(i2cConfig());
 
     // Note: Unlike UARTs which are configured when client is present,
     // I2C buses are initialized unconditionally if they are configured.
@@ -438,15 +497,15 @@ void init(void)
 #ifdef USE_I2C_DEVICE_4
     i2cInit(I2CDEV_4);
 #endif
-#endif /* USE_I2C */
+#endif // USE_I2C
 
-#endif /* TARGET_BUS_INIT */
+#endif // TARGET_BUS_INIT
 
 #ifdef USE_HARDWARE_REVISION_DETECTION
     updateHardwareRevision();
 #endif
 
-#ifdef VTX_RTC6705
+#ifdef USE_VTX_RTC6705
     rtc6705IOInit();
 #endif
 
@@ -454,14 +513,16 @@ void init(void)
     cameraControlInit();
 #endif
 
-#if defined(SONAR_SOFTSERIAL2_EXCLUSIVE) && defined(SONAR) && defined(USE_SOFTSERIAL2)
-    if (feature(FEATURE_SONAR) && feature(FEATURE_SOFTSERIAL)) {
+// XXX These kind of code should goto target/config.c?
+// XXX And these no longer work properly as FEATURE_RANGEFINDER does control HCSR04 runtime configuration.
+#if defined(RANGEFINDER_HCSR04_SOFTSERIAL2_EXCLUSIVE) && defined(USE_RANGEFINDER_HCSR04) && defined(USE_SOFTSERIAL2)
+    if (feature(FEATURE_RANGEFINDER) && feature(FEATURE_SOFTSERIAL)) {
         serialRemovePort(SERIAL_PORT_SOFTSERIAL2);
     }
 #endif
 
-#if defined(SONAR_SOFTSERIAL1_EXCLUSIVE) && defined(SONAR) && defined(USE_SOFTSERIAL1)
-    if (feature(FEATURE_SONAR) && feature(FEATURE_SOFTSERIAL)) {
+#if defined(RANGEFINDER_HCSR04_SOFTSERIAL1_EXCLUSIVE) && defined(USE_RANGEFINDER_HCSR04) && defined(USE_SOFTSERIAL1)
+    if (feature(FEATURE_RANGEFINDER) && feature(FEATURE_SOFTSERIAL)) {
         serialRemovePort(SERIAL_PORT_SOFTSERIAL1);
     }
 #endif
@@ -485,6 +546,34 @@ void init(void)
 
     systemState |= SYSTEM_STATE_SENSORS_READY;
 
+    // gyro.targetLooptime set in sensorsAutodetect(),
+    // so we are ready to call validateAndFixGyroConfig(), pidInit(), and setAccelerationFilter()
+    validateAndFixGyroConfig();
+    pidInit(currentPidProfile);
+    accInitFilters();
+
+#ifdef USE_PID_AUDIO
+    pidAudioInit();
+#endif
+
+#ifdef USE_SERVOS
+    servosInit();
+    servoConfigureOutput();
+    if (isMixerUsingServos()) {
+        //pwm_params.useChannelForwarding = feature(FEATURE_CHANNEL_FORWARDING);
+        servoDevInit(&servoConfig()->dev);
+    }
+    servosFilterInit();
+#endif
+
+#ifdef USE_PINIO
+    pinioInit(pinioConfig());
+#endif
+
+#ifdef USE_PINIOBOX
+    pinioBoxInit(pinioBoxConfig());
+#endif
+
     LED1_ON;
     LED0_OFF;
     LED2_OFF;
@@ -500,39 +589,9 @@ void init(void)
     LED0_OFF;
     LED1_OFF;
 
-    // gyro.targetLooptime set in sensorsAutodetect(),
-    // so we are ready to call validateAndFixGyroConfig(), pidInit(), and setAccelerationFilter()
-    validateAndFixGyroConfig();
-    pidInit(currentPidProfile);
-    setAccelerationFilter(accelerometerConfig()->acc_lpf_hz);
-
-    mixerInit(mixerConfig()->mixerMode);
-
-    uint16_t idlePulse = motorConfig()->mincommand;
-    if (feature(FEATURE_3D)) {
-        idlePulse = flight3DConfig()->neutral3d;
-    }
-    if (motorConfig()->dev.motorPwmProtocol == PWM_TYPE_BRUSHED) {
-        featureClear(FEATURE_3D);
-        idlePulse = 0; // brushed motors
-    }
-    mixerConfigureOutput();
-    motorDevInit(&motorConfig()->dev, idlePulse, getMotorCount());
-    systemState |= SYSTEM_STATE_MOTORS_READY;
-
-#ifdef USE_SERVOS
-    servosInit();
-    servoConfigureOutput();
-    if (isMixerUsingServos()) {
-        //pwm_params.useChannelForwarding = feature(FEATURE_CHANNEL_FORWARDING);
-        servoDevInit(&servoConfig()->dev);
-    }
-    servosFilterInit();
-#endif
-
     imuInit();
 
-    mspFcInit();
+    mspInit();
     mspSerialInit();
 
 #ifdef USE_CLI
@@ -546,15 +605,15 @@ void init(void)
 /*
  * CMS, display devices and OSD
  */
-#ifdef CMS
+#ifdef USE_CMS
     cmsInit();
 #endif
 
-#if (defined(OSD) || (defined(USE_MSP_DISPLAYPORT) && defined(CMS)) || defined(USE_OSD_SLAVE))
+#if (defined(USE_OSD) || (defined(USE_MSP_DISPLAYPORT) && defined(USE_CMS)) || defined(USE_OSD_SLAVE))
     displayPort_t *osdDisplayPort = NULL;
 #endif
 
-#if defined(OSD) && !defined(USE_OSD_SLAVE)
+#if defined(USE_OSD) && !defined(USE_OSD_SLAVE)
     //The OSD need to be initialised after GYRO to avoid GYRO initialisation failure on some targets
 
     if (feature(FEATURE_OSD)) {
@@ -569,7 +628,7 @@ void init(void)
     }
 #endif
 
-#if defined(USE_OSD_SLAVE) && !defined(OSD)
+#if defined(USE_OSD_SLAVE) && !defined(USE_OSD)
 #if defined(USE_MAX7456)
     // If there is a max7456 chip for the OSD then use it
     osdDisplayPort = max7456DisplayPortInit(vcdProfile());
@@ -578,7 +637,7 @@ void init(void)
 #endif
 #endif
 
-#if defined(CMS) && defined(USE_MSP_DISPLAYPORT)
+#if defined(USE_CMS) && defined(USE_MSP_DISPLAYPORT)
     // If BFOSD is not active, then register MSP_DISPLAYPORT as a CMS device.
     if (!osdDisplayPort)
         cmsDisplayPortRegister(displayPortMspInit());
@@ -591,15 +650,25 @@ void init(void)
     }
 #endif
 
+#if defined(USE_CMS) && defined(USE_SPEKTRUM_CMS_TELEMETRY) && defined(USE_TELEMETRY_SRXL)
+    // Register the srxl Textgen telemetry sensor as a displayport device
+    cmsDisplayPortRegister(displayPortSrxlInit());
+#endif
 
-#ifdef GPS
+#if defined(USE_CMS) && defined(USE_CRSF_CMS_TELEMETRY) && defined(USE_TELEMETRY)
+    cmsDisplayPortRegister(displayPortCrsfInit());
+#endif
+
+#ifdef USE_GPS
     if (feature(FEATURE_GPS)) {
         gpsInit();
+#ifdef USE_NAV
         navigationInit();
+#endif
     }
 #endif
 
-#ifdef LED_STRIP
+#ifdef USE_LED_STRIP
     ledStripInit();
 
     if (feature(FEATURE_LED_STRIP)) {
@@ -607,7 +676,7 @@ void init(void)
     }
 #endif
 
-#ifdef TELEMETRY
+#ifdef USE_TELEMETRY
     if (feature(FEATURE_TELEMETRY)) {
         telemetryInit();
     }
@@ -619,11 +688,11 @@ void init(void)
     }
 #endif
 
-#ifdef USB_DETECT_PIN
+#ifdef USE_USB_DETECT
     usbCableDetectInit();
 #endif
 
-#ifdef TRANSPONDER
+#ifdef USE_TRANSPONDER
     if (feature(FEATURE_TRANSPONDER)) {
         transponderInit();
         transponderStartRepeating();
@@ -632,21 +701,25 @@ void init(void)
 #endif
 
 #ifdef USE_FLASHFS
-#if defined(USE_FLASH_M25P16)
-    m25p16_init(flashConfig());
+#if defined(USE_FLASH)
+    flashInit(flashConfig());
 #endif
     flashfsInit();
 #endif
 
 #ifdef USE_SDCARD
     if (blackboxConfig()->device == BLACKBOX_DEVICE_SDCARD) {
-        sdcardInsertionDetectInit();
-        sdcard_init(sdcardConfig()->useDma);
-        afatfs_init();
+        if (sdcardConfig()->enabled) {
+            sdcardInsertionDetectInit();
+            sdcard_init(sdcardConfig());
+            afatfs_init();
+        } else {
+            blackboxConfigMutable()->device = BLACKBOX_DEVICE_NONE;
+        }
     }
 #endif
 
-#ifdef BLACKBOX
+#ifdef USE_BLACKBOX
     blackboxInit();
 #endif
 
@@ -654,26 +727,29 @@ void init(void)
         accSetCalibrationCycles(CALIBRATING_ACC_CYCLES);
     }
     gyroStartCalibration(false);
-#ifdef BARO
+#ifdef USE_BARO
     baroSetCalibrationCycles(CALIBRATING_BARO_CYCLES);
 #endif
 
-#ifdef VTX_CONTROL
+#ifdef USE_VTX_CONTROL
     vtxControlInit();
 
+#if defined(USE_VTX_COMMON)
     vtxCommonInit();
+    vtxInit();
+#endif
 
-#ifdef VTX_SMARTAUDIO
+#ifdef USE_VTX_SMARTAUDIO
     vtxSmartAudioInit();
 #endif
 
-#ifdef VTX_TRAMP
+#ifdef USE_VTX_TRAMP
     vtxTrampInit();
 #endif
 
-#ifdef VTX_RTC6705
+#ifdef USE_VTX_RTC6705
 #ifdef VTX_RTC6705_OPTIONAL
-    if (!vtxCommonDeviceRegistered()) // external VTX takes precedence when configured.
+    if (!vtxCommonDevice()) // external VTX takes precedence when configured.
 #endif
     {
         vtxRTC6705Init();
@@ -714,21 +790,17 @@ void init(void)
     LED2_ON;
 #endif
 
+#ifdef USE_RCDEVICE
+    rcdeviceInit();
+#endif // USE_RCDEVICE
+
     // Latch active features AGAIN since some may be modified by init().
     latchActiveFeatures();
     pwmEnableMotors();
 
     setArmingDisabled(ARMING_DISABLED_BOOT_GRACE_TIME);
 
-#ifdef USE_OSD_SLAVE
-    osdSlaveTasksInit();
-#else
     fcTasksInit();
-#endif
-
-#ifdef USE_RCSPLIT
-    rcSplitInit();
-#endif // USE_RCSPLIT
 
     systemState |= SYSTEM_STATE_READY;
 }

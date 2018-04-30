@@ -1,18 +1,21 @@
 /*
- * This file is part of Cleanflight.
+ * This file is part of Cleanflight and Betaflight.
  *
- * Cleanflight is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Cleanflight and Betaflight are free software. You can redistribute
+ * this software and/or modify this software under the terms of the
+ * GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or (at your option)
+ * any later version.
  *
- * Cleanflight is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Cleanflight and Betaflight are distributed in the hope that they
+ * will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this software.
+ *
+ * If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdbool.h>
@@ -23,8 +26,8 @@
 
 #include "common/maths.h"
 
-#include "config/parameter_group.h"
-#include "config/parameter_group_ids.h"
+#include "pg/pg.h"
+#include "pg/pg_ids.h"
 
 #include "drivers/bus.h"
 #include "drivers/bus_spi.h"
@@ -35,6 +38,7 @@
 #include "drivers/barometer/barometer_bmp280.h"
 #include "drivers/barometer/barometer_fake.h"
 #include "drivers/barometer/barometer_ms5611.h"
+#include "drivers/barometer/barometer_lps.h"
 
 #include "fc/runtime_config.h"
 
@@ -64,7 +68,7 @@ void pgResetFn_barometerConfig(barometerConfig_t *barometerConfig)
     //   a. Precedence is in the order of popularity; BMP280, MS5611 then BMP085, then
     //   b. If SPI variant is specified, it is likely onboard, so take it.
 
-#if !(defined(DEFAULT_BARO_SPI_BMP280) || defined(DEFAULT_BARO_BMP280) || defined(DEFAULT_BARO_SPI_MS5611) || defined(DEFAULT_BARO_MS5611) || defined(DEFAULT_BARO_BMP085))
+#if !(defined(DEFAULT_BARO_SPI_BMP280) || defined(DEFAULT_BARO_BMP280) || defined(DEFAULT_BARO_SPI_MS5611) || defined(DEFAULT_BARO_MS5611) || defined(DEFAULT_BARO_BMP085) || defined(DEFAULT_BARO_SPI_LPS))
 #if defined(USE_BARO_BMP280) || defined(USE_BARO_SPI_BMP280)
 #if defined(USE_BARO_SPI_BMP280)
 #define DEFAULT_BARO_SPI_BMP280
@@ -77,6 +81,8 @@ void pgResetFn_barometerConfig(barometerConfig_t *barometerConfig)
 #else
 #define DEFAULT_BARO_MS5611
 #endif
+#elif defined(USE_BARO_SPI_LPS)
+#define DEFAULT_BARO_SPI_LPS
 #elif defined(DEFAULT_BARO_BMP085)
 #define DEFAULT_BARO_BMP085
 #endif
@@ -92,6 +98,12 @@ void pgResetFn_barometerConfig(barometerConfig_t *barometerConfig)
     barometerConfig->baro_bustype = BUSTYPE_SPI;
     barometerConfig->baro_spi_device = SPI_DEV_TO_CFG(spiDeviceByInstance(MS5611_SPI_INSTANCE));
     barometerConfig->baro_spi_csn = IO_TAG(MS5611_CS_PIN);
+    barometerConfig->baro_i2c_device = I2C_DEV_TO_CFG(I2CINVALID);
+    barometerConfig->baro_i2c_address = 0;
+#elif defined(DEFAULT_BARO_SPI_LPS)
+    barometerConfig->baro_bustype = BUSTYPE_SPI;
+    barometerConfig->baro_spi_device = SPI_DEV_TO_CFG(spiDeviceByInstance(LPS_SPI_INSTANCE));
+    barometerConfig->baro_spi_csn = IO_TAG(LPS_CS_PIN);
     barometerConfig->baro_i2c_device = I2C_DEV_TO_CFG(I2CINVALID);
     barometerConfig->baro_i2c_address = 0;
 #elif defined(DEFAULT_BARO_MS5611) || defined(DEFAULT_BARO_BMP280) || defined(DEFAULT_BARO_BMP085)
@@ -111,7 +123,7 @@ void pgResetFn_barometerConfig(barometerConfig_t *barometerConfig)
 #endif
 }
 
-#ifdef BARO
+#ifdef USE_BARO
 
 static uint16_t calibratingB = 0;      // baro calibration = get new ground pressure value
 static int32_t baroPressure = 0;
@@ -154,7 +166,7 @@ bool baroDetect(baroDev_t *dev, baroSensor_e baroHardwareToUse)
 
     switch (baroHardware) {
     case BARO_DEFAULT:
-        ; // fallthough
+        FALLTHROUGH;
 
     case BARO_BMP085:
 #ifdef USE_BARO_BMP085
@@ -175,7 +187,7 @@ bool baroDetect(baroDev_t *dev, baroSensor_e baroHardwareToUse)
             }
         }
 #endif
-        ; // fallthough
+        FALLTHROUGH;
 
     case BARO_MS5611:
 #if defined(USE_BARO_MS5611) || defined(USE_BARO_SPI_MS5611)
@@ -184,7 +196,16 @@ bool baroDetect(baroDev_t *dev, baroSensor_e baroHardwareToUse)
             break;
         }
 #endif
-        ; // fallthough
+        FALLTHROUGH;
+
+    case BARO_LPS:
+#if defined(USE_BARO_SPI_LPS)
+        if (lpsDetect(dev)) {
+            baroHardware = BARO_LPS;
+            break;
+        }
+#endif
+        FALLTHROUGH;
 
     case BARO_BMP280:
 #if defined(USE_BARO_BMP280) || defined(USE_BARO_SPI_BMP280)
@@ -193,7 +214,7 @@ bool baroDetect(baroDev_t *dev, baroSensor_e baroHardwareToUse)
             break;
         }
 #endif
-        ; // fallthough
+        FALLTHROUGH;
 
     case BARO_NONE:
         baroHardware = BARO_NONE;
@@ -298,6 +319,8 @@ uint32_t baroUpdate(void)
             baro.dev.get_up(&baro.dev);
             baro.dev.start_ut(&baro.dev);
             baro.dev.calculate(&baroPressure, &baroTemperature);
+            baro.baroPressure = baroPressure;
+            baro.baroTemperature = baroTemperature;
             baroPressureSum = recalculateBarometerTotal(barometerConfig()->baro_sample_count, baroPressureSum, baroPressure);
             state = BAROMETER_NEEDS_SAMPLES;
             return baro.dev.ut_delay;
@@ -312,7 +335,7 @@ int32_t baroCalculateAltitude(void)
     // calculates height from ground via baro readings
     // see: https://github.com/diydrones/ardupilot/blob/master/libraries/AP_Baro/AP_Baro.cpp#L140
     if (isBaroCalibrationComplete()) {
-        BaroAlt_tmp = lrintf((1.0f - powf((float)(baroPressureSum / PRESSURE_SAMPLE_COUNT) / 101325.0f, 0.190295f)) * 4433000.0f); // in cm
+        BaroAlt_tmp = lrintf((1.0f - pow_approx((float)(baroPressureSum / PRESSURE_SAMPLE_COUNT) / 101325.0f, 0.190295f)) * 4433000.0f); // in cm
         BaroAlt_tmp -= baroGroundAltitude;
         baro.BaroAlt = lrintf((float)baro.BaroAlt * CONVERT_PARAMETER_TO_FLOAT(barometerConfig()->baro_noise_lpf) + (float)BaroAlt_tmp * (1.0f - CONVERT_PARAMETER_TO_FLOAT(barometerConfig()->baro_noise_lpf))); // additional LPF to reduce baro noise
     }
@@ -328,7 +351,7 @@ void performBaroCalibrationCycle(void)
 
     baroGroundPressure -= baroGroundPressure / 8;
     baroGroundPressure += baroPressureSum / PRESSURE_SAMPLE_COUNT;
-    baroGroundAltitude = (1.0f - powf((baroGroundPressure / 8) / 101325.0f, 0.190295f)) * 4433000.0f;
+    baroGroundAltitude = (1.0f - pow_approx((baroGroundPressure / 8) / 101325.0f, 0.190295f)) * 4433000.0f;
 
     if (baroGroundPressure == savedGroundPressure)
       calibratingB = 0;
