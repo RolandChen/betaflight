@@ -39,6 +39,7 @@
 #include "drivers/pwm_output.h"
 #include "drivers/pwm_esc_detect.h"
 #include "drivers/time.h"
+#include "drivers/io.h"
 
 #include "io/motors.h"
 
@@ -103,13 +104,11 @@ void pgResetFn_motorConfig(motorConfig_t *motorConfig)
     motorConfig->dev.useBurstDshot = ENABLE_DSHOT_DMAR;
 #endif
 
-    int motorIndex = 0;
-    for (int i = 0; i < USABLE_TIMER_CHANNEL_COUNT && motorIndex < MAX_SUPPORTED_MOTORS; i++) {
-        if (timerHardware[i].usageFlags & TIM_USE_MOTOR) {
-            motorConfig->dev.ioTags[motorIndex] = timerHardware[i].tag;
-            motorIndex++;
-        }
+    for (int motorIndex = 0; motorIndex < MAX_SUPPORTED_MOTORS; motorIndex++) {
+        motorConfig->dev.ioTags[motorIndex] = timerioTagGetByUsage(TIM_USE_MOTOR, motorIndex);
     }
+
+    motorConfig->motorPoleCount = 14;   // Most brushes motors that we use are 14 poles
 }
 
 PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, customMotorMixer, PG_MOTOR_MIXER, 0);

@@ -45,19 +45,25 @@ static flashDevice_t flashDevice;
 bool flashInit(const flashConfig_t *flashConfig)
 {
     busdev = &busInstance;
-    busdev->bustype = BUSTYPE_SPI;
-    spiBusSetInstance(busdev, spiInstanceByDevice(SPI_CFG_TO_DEV(flashConfig->spiDevice)));
+
     if (flashConfig->csTag) {
         busdev->busdev_u.spi.csnPin = IOGetByTag(flashConfig->csTag);
     } else {
         return false;
     }
 
+    if (IOGetOwner(busdev->busdev_u.spi.csnPin) != OWNER_SPI_PREINIT) {
+        return false;
+    }
+
+    busdev->bustype = BUSTYPE_SPI;
+    spiBusSetInstance(busdev, spiInstanceByDevice(SPI_CFG_TO_DEV(flashConfig->spiDevice)));
+
     IOInit(busdev->busdev_u.spi.csnPin, OWNER_FLASH_CS, 0);
     IOConfigGPIO(busdev->busdev_u.spi.csnPin, SPI_IO_CS_CFG);
     IOHi(busdev->busdev_u.spi.csnPin);
 
-#ifndef M25P16_SPI_SHARED
+#ifndef FLASH_SPI_SHARED
     //Maximum speed for standard READ command is 20mHz, other commands tolerate 25mHz
     //spiSetDivisor(busdev->busdev_u.spi.instance, SPI_CLOCK_FAST);
     spiSetDivisor(busdev->busdev_u.spi.instance, SPI_CLOCK_STANDARD*2);

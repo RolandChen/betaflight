@@ -65,7 +65,7 @@
 #include "fc/rc_controls.h"
 #include "fc/runtime_config.h"
 
-#include "flight/altitude.h"
+#include "flight/position.h"
 #include "flight/imu.h"
 #ifdef USE_ESC_SENSOR
 #include "flight/mixer.h"
@@ -428,8 +428,15 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_GPS_SPEED:
-        // FIXME ideally we want to use SYM_KMH symbol but it's not in the font any more, so we use K.
-        tfp_sprintf(buff, "%3dK", CM_S_TO_KM_H(gpsSol.groundSpeed));
+        // FIXME ideally we want to use SYM_KMH symbol but it's not in the font any more, so we use K (M for MPH)
+        switch (osdConfig()->units) {
+        case OSD_UNIT_IMPERIAL:
+            tfp_sprintf(buff, "%3dM", CM_S_TO_MPH(gpsSol.groundSpeed));
+            break;
+        default:
+            tfp_sprintf(buff, "%3dK", CM_S_TO_KM_H(gpsSol.groundSpeed));
+            break;
+        }
         break;
 
     case OSD_GPS_LAT:
@@ -666,7 +673,7 @@ static bool osdDrawSingleElement(uint8_t item)
                     const char motorNumber = '1' + i;
                     // if everything is OK just display motor number else R, T or C
                     char warnFlag = motorNumber;
-                    if (ARMING_FLAG(ARMED) && osdConfig()->esc_rpm_alarm != ESC_RPM_ALARM_OFF && escData->rpm <= osdConfig()->esc_rpm_alarm) {
+                    if (ARMING_FLAG(ARMED) && osdConfig()->esc_rpm_alarm != ESC_RPM_ALARM_OFF && calcEscRpm(escData->rpm) <= osdConfig()->esc_rpm_alarm) {
                         warnFlag = 'R';
                     }
                     if (osdConfig()->esc_temp_alarm != ESC_TEMP_ALARM_OFF && escData->temperature >= osdConfig()->esc_temp_alarm) {
@@ -813,7 +820,7 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_ESC_RPM:
         if (feature(FEATURE_ESC_SENSOR)) {
-            tfp_sprintf(buff, "%5d", escDataCombined == NULL ? 0 : escDataCombined->rpm);
+            tfp_sprintf(buff, "%5d", escDataCombined == NULL ? 0 : calcEscRpm(escDataCombined->rpm));
         }
         break;
 #endif
@@ -962,6 +969,7 @@ void pgResetFn_osdConfig(osdConfig_t *osdConfig)
     osdConfig->alt_alarm  = 100; // meters or feet depend on configuration
     osdConfig->esc_temp_alarm = ESC_TEMP_ALARM_OFF; // off by default
     osdConfig->esc_rpm_alarm = ESC_RPM_ALARM_OFF; // off by default
+    osdConfig->esc_current_alarm = ESC_CURRENT_ALARM_OFF; // off by default
 
     osdConfig->ahMaxPitch = 20; // 20 degrees
     osdConfig->ahMaxRoll = 40; // 40 degrees
@@ -1120,7 +1128,14 @@ static void osdUpdateStats(void)
 {
     int16_t value = 0;
 #ifdef USE_GPS
-    value = CM_S_TO_KM_H(gpsSol.groundSpeed);
+    switch (osdConfig()->units) {
+    case OSD_UNIT_IMPERIAL:
+        value = CM_S_TO_MPH(gpsSol.groundSpeed);
+        break;
+    default:
+        value = CM_S_TO_KM_H(gpsSol.groundSpeed);
+        break;
+    }
 #endif
     if (stats.max_speed < value) {
         stats.max_speed = value;

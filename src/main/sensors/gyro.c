@@ -179,11 +179,7 @@ static void gyroInitLowpassFilterLpf(gyroSensor_t *gyroSensor, int slot, int typ
 PG_REGISTER_WITH_RESET_TEMPLATE(gyroConfig_t, gyroConfig, PG_GYRO_CONFIG, 2);
 
 #ifndef GYRO_CONFIG_USE_GYRO_DEFAULT
-#ifdef USE_DUAL_GYRO
-#define GYRO_CONFIG_USE_GYRO_DEFAULT GYRO_CONFIG_USE_GYRO_BOTH
-#else
 #define GYRO_CONFIG_USE_GYRO_DEFAULT GYRO_CONFIG_USE_GYRO_1
-#endif
 #endif
 
 PG_RESET_TEMPLATE(gyroConfig_t, gyroConfig,
@@ -226,6 +222,22 @@ const busDevice_t *gyroSensorBus(void)
     return &gyroSensor1.gyroDev.bus;
 #endif
 }
+
+#ifdef USE_GYRO_REGISTER_DUMP
+const busDevice_t *gyroSensorBusByDevice(uint8_t whichSensor)
+{
+#ifdef USE_DUAL_GYRO
+    if (whichSensor == GYRO_CONFIG_USE_GYRO_2) {
+        return &gyroSensor2.gyroDev.bus;
+    } else {
+        return &gyroSensor1.gyroDev.bus;
+    }
+#else
+    UNUSED(whichSensor);
+    return &gyroSensor1.gyroDev.bus;
+#endif
+}
+#endif // USE_GYRO_REGISTER_DUMP
 
 const mpuConfiguration_t *gyroMpuConfiguration(void)
 {
@@ -437,6 +449,7 @@ static bool gyroInitSensor(gyroSensor_t *gyroSensor)
 #endif
 
     const gyroSensor_e gyroHardware = gyroDetect(&gyroSensor->gyroDev);
+    gyroSensor->gyroDev.gyroHardware = gyroHardware;
     if (gyroHardware == GYRO_NONE) {
         return false;
     }
@@ -603,7 +616,21 @@ bool gyroInit(void)
         }
         gyroHasOverflowProtection =  gyroHasOverflowProtection && gyroSensor2.gyroDev.gyroHasOverflowProtection;
     }
-#endif
+#endif // USE_DUAL_GYRO
+
+#ifdef USE_DUAL_GYRO
+    // Only allow using both gyros simultaneously if they are the same hardware type.
+    // If the user selected "BOTH" and they are not the same type, then reset to using only the first gyro.
+    if (gyroToUse == GYRO_CONFIG_USE_GYRO_BOTH) {
+        if (gyroSensor1.gyroDev.gyroHardware != gyroSensor2.gyroDev.gyroHardware) {
+            gyroToUse = GYRO_CONFIG_USE_GYRO_1;
+            gyroConfigMutable()->gyro_to_use = GYRO_CONFIG_USE_GYRO_1;
+            detectedSensors[SENSOR_INDEX_GYRO] = gyroSensor1.gyroDev.gyroHardware;
+            sensorsSet(SENSOR_GYRO);
+
+        }
+    }
+#endif // USE_DUAL_GYRO
     return ret;
 }
 
@@ -1261,8 +1288,8 @@ uint16_t gyroAbsRateDps(int axis)
 }
 
 #ifdef USE_GYRO_REGISTER_DUMP
-uint8_t gyroReadRegister(uint8_t reg)
+uint8_t gyroReadRegister(uint8_t whichSensor, uint8_t reg)
 {
-    return mpuGyroReadRegister(gyroSensorBus(), reg);
+    return mpuGyroReadRegister(gyroSensorBusByDevice(whichSensor), reg);
 }
-#endif
+#endif // USE_GYRO_REGISTER_DUMP
