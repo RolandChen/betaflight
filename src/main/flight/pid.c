@@ -161,6 +161,13 @@ void pidResetITerm(void)
     }
 }
 
+void pidResetITermWithoutYaw(void)
+{
+    for (int axis = 0; axis < 2; axis++) {
+        pidData[axis].I = 0.0f;
+    }
+}
+
 static FAST_RAM_INITIALIZED float itermAccelerator = 1.0f;
 
 void pidSetItermAccelerator(float newItermAccelerator)
@@ -424,7 +431,7 @@ static float pidLevel(int axis, const pidProfile_t *pidProfile, const rollAndPit
     const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE)) {
         // The special mode for heli to takeoff. Not a "LEVEL" mode any more.
-        pidResetITerm();
+        pidResetITermWithoutYaw();
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * levelGain;
 

@@ -149,6 +149,7 @@ extern float throttleBoost;
 extern pt1Filter_t throttleLpf;
 
 void pidResetITerm(void);
+void pidResetITermWithoutYaw(void);
 void pidStabilisationState(pidStabilisationState_e pidControllerState);
 void pidSetItermAccelerator(float newItermAccelerator);
 void pidInitFilters(const pidProfile_t *pidProfile);
@@ -156,4 +157,3 @@ void pidInitConfig(const pidProfile_t *pidProfile);
 void pidInit(const pidProfile_t *pidProfile);
 void pidCopyProfile(uint8_t dstPidProfileIndex, uint8_t srcPidProfileIndex);
 bool crashRecoveryModeActive(void);
-
