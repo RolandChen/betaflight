@@ -423,13 +423,20 @@ static float pidLevel(int axis, const pidProfile_t *pidProfile, const rollAndPit
     angle = constrainf(angle, -pidProfile->levelAngleLimit, pidProfile->levelAngleLimit);
     const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE)) {
+        // The special mode for heli to takeoff. Not a "LEVEL" mode any more.
+        pidResetITerm();
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * levelGain;
+
     } else {
         // HORIZON mode - mix of ANGLE and ACRO modes
         // mix in errorAngle to currentPidSetpoint to add a little auto-level feel
-        const float horizonLevelStrength = calcHorizonLevelStrength();
-        currentPidSetpoint = currentPidSetpoint + (errorAngle * horizonGain * horizonLevelStrength);
+
+        // USE HORIZON MODE TO REPLACE ANGLE mode.
+
+        //const float horizonLevelStrength = calcHorizonLevelStrength();
+        //currentPidSetpoint = currentPidSetpoint + (errorAngle * horizonGain * horizonLevelStrength);
+        currentPidSetpoint = errorAngle * horizonGain;
     }
     return currentPidSetpoint;
 }
@@ -634,7 +641,7 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
 
 #ifdef USE_YAW_SPIN_RECOVERY
             if (yawSpinActive)  {
-                // zero PIDs on pitch and roll leaving yaw P to correct spin 
+                // zero PIDs on pitch and roll leaving yaw P to correct spin
                 pidData[axis].P = 0;
                 pidData[axis].I = 0;
                 pidData[axis].D = 0;
@@ -649,7 +656,7 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
 
 #ifdef USE_YAW_SPIN_RECOVERY
     if (yawSpinActive) {
-    // yaw P alone to correct spin 
+    // yaw P alone to correct spin
         pidData[FD_YAW].I = 0;
     }
 #endif // USE_YAW_SPIN_RECOVERY

@@ -549,12 +549,17 @@ bool processRx(timeUs_t currentTimeUs)
 
     /* In airmode Iterm should be prevented to grow when Low thottle and Roll + Pitch Centered.
      This is needed to prevent Iterm winding on the ground, but keep full stabilisation on 0 throttle while in air */
+
+    /* In Heli Version Iterm should not be cleared, for 0%THR landing*/
+    /* AIRMODE should not be activated on Heli */
+
     if (throttleStatus == THROTTLE_LOW && !airmodeIsActivated) {
-        pidResetITerm();
+        //pidResetITerm();
         if (currentPidProfile->pidAtMinThrottle)
             pidStabilisationState(PID_STABILISATION_ON);
         else
-            pidStabilisationState(PID_STABILISATION_OFF);
+            pidStabilisationState(PID_STABILISATION_OFF)
+            ;
     } else {
         pidStabilisationState(PID_STABILISATION_ON);
     }
@@ -866,7 +871,7 @@ static NOINLINE void subTaskMainSubprocesses(timeUs_t currentTimeUs)
         updateMagHold();
     }
 #endif
-    
+
     // If we're armed, at minimum throttle, and we do arming via the
     // sticks, do not process yaw input from the rx.  We do this so the
     // motors do not spin up while we are trying to arm or disarm.
