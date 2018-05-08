@@ -95,7 +95,7 @@ void resetPidProfile(pidProfile_t *pidProfile)
         .pid = {
             [PID_ROLL] =  { 40, 40, 30 },
             [PID_PITCH] = { 58, 50, 35 },
-            [PID_YAW] =   { 70, 45, 20 },
+            [PID_YAW] =   { 70, 45, 10 },
             [PID_ALT] =   { 50, 0, 0 },
             [PID_POS] =   { 15, 0, 0 },     // POSHOLD_P * 100, POSHOLD_I * 100,
             [PID_POSR] =  { 34, 14, 53 },   // POSHOLD_RATE_P * 10, POSHOLD_RATE_I * 100, POSHOLD_RATE_D * 1000,
@@ -618,7 +618,14 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
 
         // -----calculate I component
         const float ITerm = pidData[axis].I;
-        const float ITermNew = constrainf(ITerm + pidCoefficient[axis].Ki * errorRate * dynCi, -itermLimit, itermLimit);
+        float ITermNew = 0;
+        // Heli: can NOT limit the Iterm of YAW
+        if (axis == FD_YAW) {
+            ITermNew = ITerm + pidCoefficient[axis].Ki * errorRate * dynCi;
+        }
+        else {
+            ITermNew = constrainf(ITerm + pidCoefficient[axis].Ki * errorRate * dynCi, -itermLimit, itermLimit);
+        }
         const bool outputSaturated = mixerIsOutputSaturated(axis, errorRate);
         if (outputSaturated == false || ABS(ITermNew) < ABS(ITerm)) {
             // Only increase ITerm if output is not saturated
@@ -626,7 +633,10 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
         }
 
         // -----calculate D component
-        if (axis != FD_YAW) {
+         // RECOVER the D of YAW
+         //if (axis != FD_YAW)
+         if (1)
+         {
             // no transition if relaxFactor == 0
             float transition = relaxFactor > 0 ? MIN(1.f, getRcDeflectionAbs(axis) * relaxFactor) : 1;
 
@@ -668,8 +678,8 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
     }
 #endif // USE_YAW_SPIN_RECOVERY
 
-    // YAW has no D
-    pidData[FD_YAW].Sum = pidData[FD_YAW].P + pidData[FD_YAW].I;
+    // The D of YAW RECOVERED
+    pidData[FD_YAW].Sum = pidData[FD_YAW].P + pidData[FD_YAW].I + pidData[FD_YAW].D;
 
     // Disable PID control if at zero throttle or if gyro overflow detected
     // This may look very innefficient, but it is done on purpose to always show real CPU usage as in flight
