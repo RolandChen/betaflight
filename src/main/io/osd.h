@@ -47,6 +47,8 @@ extern const char * const osdTimerSourceNames[OSD_NUM_TIMER_TYPES];
 #define OSD_TIMER_PRECISION(timer)  ((timer >> 4) & 0x0F)
 #define OSD_TIMER_ALARM(timer)      ((timer >> 8) & 0xFF)
 
+// NB: to ensure backwards compatibility, new enum values must be appended at the end but before the OSD_XXXX_COUNT entry.
+
 typedef enum {
     OSD_RSSI_VALUE,
     OSD_MAIN_BATT_VOLTAGE,
@@ -89,6 +91,7 @@ typedef enum {
     OSD_RTC_DATETIME,
     OSD_ADJUSTMENT_RANGE,
     OSD_CORE_TEMPERATURE,
+    OSD_ANTI_GRAVITY,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -109,6 +112,9 @@ typedef enum {
     OSD_STAT_BATTERY,
     OSD_STAT_COUNT // MUST BE LAST
 } osd_stats_e;
+
+// Make sure the number of stats do not exceed the available 32bit storage
+STATIC_ASSERT(OSD_STAT_COUNT <= 32, osdstats_overflow);
 
 typedef enum {
     OSD_UNIT_IMPERIAL,
@@ -163,7 +169,7 @@ typedef struct osdConfig_s {
 
     uint8_t ahMaxPitch;
     uint8_t ahMaxRoll;
-    bool enabled_stats[OSD_STAT_COUNT];
+    uint32_t enabled_stats;
     int8_t esc_temp_alarm;
     int16_t esc_rpm_alarm;
     int16_t esc_current_alarm;
@@ -177,3 +183,6 @@ struct displayPort_s;
 void osdInit(struct displayPort_s *osdDisplayPort);
 void osdResetAlarms(void);
 void osdUpdate(timeUs_t currentTimeUs);
+void osdStatSetState(uint8_t statIndex, bool enabled);
+bool osdStatGetState(uint8_t statIndex);
+

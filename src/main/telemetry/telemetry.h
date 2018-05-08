@@ -44,7 +44,6 @@ typedef enum {
 typedef struct telemetryConfig_s {
     int16_t gpsNoFixLatitude;
     int16_t gpsNoFixLongitude;
-    uint8_t telemetry_switch;               // Use aux channel to change serial output & baudrate( MSP / Telemetry ). It disables automatic switching to Telemetry when armed.
     uint8_t telemetry_inverted;
     uint8_t halfDuplex;
     frskyGpsCoordFormat_e frsky_coordinate_format;
@@ -58,9 +57,6 @@ typedef struct telemetryConfig_s {
 
 PG_DECLARE(telemetryConfig_t, telemetryConfig);
 
-#define TELEMETRY_SHAREABLE_PORT_FUNCTIONS_MASK (FUNCTION_TELEMETRY_FRSKY_HUB | FUNCTION_TELEMETRY_LTM | FUNCTION_TELEMETRY_MAVLINK)
-#define TELEMETRY_PORT_FUNCTIONS_MASK (TELEMETRY_SHAREABLE_PORT_FUNCTIONS_MASK | FUNCTION_TELEMETRY_HOTT | FUNCTION_TELEMETRY_SMARTPORT)
-
 extern serialPort_t *telemetrySharedPort;
 
 void telemetryInit(void);
@@ -70,5 +66,3 @@ void telemetryCheckState(void);
 void telemetryProcess(uint32_t currentTime);
 
 bool telemetryDetermineEnabledState(portSharing_e portSharing);
-
-void releaseSharedTelemetryPorts(void);
