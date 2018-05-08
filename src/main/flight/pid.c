@@ -191,11 +191,11 @@ typedef union dtermLowpass_u {
 } dtermLowpass_t;
 
 static FAST_RAM filterApplyFnPtr dtermNotchApplyFn;
-static FAST_RAM biquadFilter_t dtermNotch[2];
+static FAST_RAM biquadFilter_t dtermNotch[3];
 static FAST_RAM filterApplyFnPtr dtermLowpassApplyFn;
-static FAST_RAM dtermLowpass_t dtermLowpass[2];
+static FAST_RAM dtermLowpass_t dtermLowpass[3];
 static FAST_RAM filterApplyFnPtr dtermLowpass2ApplyFn;
-static FAST_RAM pt1Filter_t dtermLowpass2[2];
+static FAST_RAM pt1Filter_t dtermLowpass2[3];
 static FAST_RAM filterApplyFnPtr ptermYawLowpassApplyFn;
 static FAST_RAM pt1Filter_t ptermYawLowpass;
 
@@ -550,8 +550,8 @@ static void handleItermRotation()
 // Based on 2DOF reference design (matlab)
 void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *angleTrim, timeUs_t currentTimeUs)
 {
-    static float previousGyroRateDterm[2];
-    static float previousPidSetpoint[2];
+    static float previousGyroRateDterm[3];
+    static float previousPidSetpoint[3];
 
     const float tpaFactor = getThrottlePIDAttenuation();
     const float motorMixRange = getMotorMixRange();
@@ -568,8 +568,8 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
     const float dynCd = flightModeFlags ? 0.0f : dtermSetpointWeight;
 
     // Precalculate gyro deta for D-term here, this allows loop unrolling
-    float gyroRateDterm[2];
-    for (int axis = FD_ROLL; axis < FD_YAW; ++axis) {
+    float gyroRateDterm[3];
+    for (int axis = FD_ROLL; axis <= FD_YAW; ++axis) {
         gyroRateDterm[axis] = dtermNotchApplyFn((filter_t *) &dtermNotch[axis], gyro.gyroADCf[axis]);
         gyroRateDterm[axis] = dtermLowpassApplyFn((filter_t *) &dtermLowpass[axis], gyroRateDterm[axis]);
         gyroRateDterm[axis] = dtermLowpass2ApplyFn((filter_t *) &dtermLowpass2[axis], gyroRateDterm[axis]);
@@ -621,7 +621,7 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
         float ITermNew = 0;
         // Heli: can NOT limit the Iterm of YAW
         if (axis == FD_YAW) {
-            ITermNew = ITerm + pidCoefficient[axis].Ki * errorRate * dynCi;
+            ITermNew = constrainf(ITerm + pidCoefficient[axis].Ki * errorRate * dynCi, -500.0f, 500.0f);
         }
         else {
             ITermNew = constrainf(ITerm + pidCoefficient[axis].Ki * errorRate * dynCi, -itermLimit, itermLimit);
@@ -635,8 +635,6 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
         // -----calculate D component
          // RECOVER the D of YAW
          //if (axis != FD_YAW)
-         if (1)
-         {
             // no transition if relaxFactor == 0
             float transition = relaxFactor > 0 ? MIN(1.f, getRcDeflectionAbs(axis) * relaxFactor) : 1;
 
@@ -655,7 +653,8 @@ void pidController(const pidProfile_t *pidProfile, const rollAndPitchTrims_t *an
             detectAndSetCrashRecovery(pidProfile->crash_recovery, axis, currentTimeUs, delta, errorRate);
 
             pidData[axis].D = pidCoefficient[axis].Kd * delta * tpaFactor;
-
+        if (axis != FD_YAW)
+        {
 #ifdef USE_YAW_SPIN_RECOVERY
             if (yawSpinActive)  {
                 // zero PIDs on pitch and roll leaving yaw P to correct spin
