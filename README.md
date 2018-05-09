@@ -1,9 +1,7 @@
-## CODE NOT fully tested ! 
-
-A fork of betaflight for helicopter mixer. (Tested by a Esky belt-cp) 
+A fork of betaflight for CP helicopters.
 
 Introduction：
-The firmware is only designed for SPRacingF3EVO. Just "make" and download. 
+The firmware is designed for SPRacingF3 and SPRacingF3EVO. Just "make" and download.
 For other boards, pins need to be assigned for servos in CLI(using "resource" command).
 Most settings can be modified in "Servos" tab of betaflight configurator(expert mode).  
 
