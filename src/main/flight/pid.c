@@ -435,8 +435,8 @@ static float pidLevel(int axis, const pidProfile_t *pidProfile, const rollAndPit
     angle = constrainf(angle, -pidProfile->levelAngleLimit, pidProfile->levelAngleLimit);
     const float errorAngle = angle - ((attitude.raw[axis] - angleTrim->raw[axis]) / 10.0f);
     if (FLIGHT_MODE(ANGLE_MODE)) {
-        // The special mode for heli to takeoff. Not a "LEVEL" mode any more.
-        pidResetITermWithoutYaw();
+       
+        //pidResetITermWithoutYaw();
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * levelGain;
 
@@ -444,10 +444,8 @@ static float pidLevel(int axis, const pidProfile_t *pidProfile, const rollAndPit
         // HORIZON mode - mix of ANGLE and ACRO modes
         // mix in errorAngle to currentPidSetpoint to add a little auto-level feel
 
-        // USE HORIZON MODE TO REPLACE ANGLE mode.
-
-        //const float horizonLevelStrength = calcHorizonLevelStrength();
-        //currentPidSetpoint = currentPidSetpoint + (errorAngle * horizonGain * horizonLevelStrength);
+        const float horizonLevelStrength = calcHorizonLevelStrength();
+        currentPidSetpoint = currentPidSetpoint + (errorAngle * horizonGain * horizonLevelStrength);
         currentPidSetpoint = errorAngle * horizonGain;
     }
     return currentPidSetpoint;

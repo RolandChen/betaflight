@@ -273,6 +273,11 @@ static const motorMixer_t mixerSingleProp[] = {
     { 1.0f,  0.0f,  0.0f, 0.0f },
 };
 
+static const motorMixer_t mixerHeliWithTail[] = {
+    { 1.0f,  0.0f,  0.0f, 0.0f },
+    { 0.5f,  0.0f,  0.0f, 1.0f },
+};
+
 static const motorMixer_t mixerQuadX1234[] = {
     { 1.0f,  1.0f, -1.0f, -1.0f },          // FRONT_L
     { 1.0f, -1.0f, -1.0f,  1.0f },          // FRONT_R
@@ -298,7 +303,7 @@ const mixer_t mixers[] = {
     { 8, false, mixerOctoFlatP },      // MIXER_OCTOFLATP
     { 8, false, mixerOctoFlatX },      // MIXER_OCTOFLATX
     { 1, true,  mixerSingleProp },     // * MIXER_AIRPLANE
-    { 1, true,  mixerSingleProp },     // * MIXER_HELI_120_CCPM
+    { 2, true,  mixerHeliWithTail },   // * MIXER_HELI_120_CCPM
     { 0, true,  NULL },                // * MIXER_HELI_90_DEG
     { 4, false, mixerVtail4 },         // MIXER_VTAIL4
     { 6, false, mixerHex6H },          // MIXER_HEX6H
