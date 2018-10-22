@@ -183,7 +183,8 @@ extern uint32_t targetPidLooptime;
 extern float throttleBoost;
 extern pt1Filter_t throttleLpf;
 
-void pidResetIterm(void);
+void pidResetITerm(void);
+void pidResetITermWithoutYaw(void);
 void pidStabilisationState(pidStabilisationState_e pidControllerState);
 void pidSetItermAccelerator(float newItermAccelerator);
 void pidInitFilters(const pidProfile_t *pidProfile);

@@ -1,3 +1,15 @@
+A fork of betaflight for CP helicopters.
+
+Introduction：
+The firmware is designed for SPRacingF3 and SPRacingF3EVO. Just "make" and download.
+For other boards, pins need to be assigned for servos in CLI(using "resource" command).
+Most settings can be modified in "Servos" tab of betaflight configurator(expert mode).  
+
+
+
+
+
+
 ![Betaflight](https://raw.githubusercontent.com/wiki/betaflight/betaflight/images/betaflight/bf_logo.png)
 
 Betaflight is flight controller software (firmware) used to fly multi-rotor craft and fixed wing craft.

@@ -586,14 +586,19 @@ bool processRx(timeUs_t currentTimeUs)
         airmodeIsActivated = false;
     }
 
-    /* In airmode iterm should be prevented to grow when Low thottle and Roll + Pitch Centered.
-     This is needed to prevent iterm winding on the ground, but keep full stabilisation on 0 throttle while in air */
+    /* In airmode Iterm should be prevented to grow when Low thottle and Roll + Pitch Centered.
+     This is needed to prevent Iterm winding on the ground, but keep full stabilisation on 0 throttle while in air */
+
+    /* In Heli Version Iterm should not be cleared, for 0%THR landing*/
+    /* AIRMODE should not be activated on Heli */
+
     if (throttleStatus == THROTTLE_LOW && !airmodeIsActivated) {
-        pidResetIterm();
+        //pidResetITerm();
         if (currentPidProfile->pidAtMinThrottle)
             pidStabilisationState(PID_STABILISATION_ON);
         else
-            pidStabilisationState(PID_STABILISATION_OFF);
+            pidStabilisationState(PID_STABILISATION_OFF)
+            ;
     } else {
         pidStabilisationState(PID_STABILISATION_ON);
     }
@@ -850,7 +855,7 @@ bool processRx(timeUs_t currentTimeUs)
 #endif
 
     pidSetAntiGravityState(IS_RC_MODE_ACTIVE(BOXANTIGRAVITY) || featureIsEnabled(FEATURE_ANTI_GRAVITY));
-    
+
     return true;
 }
 

@@ -184,6 +184,20 @@ static void pidSetTargetLooptime(uint32_t pidLooptime)
     pidFrequency = 1.0f / dT;
 }
 
+void pidResetITerm(void)
+{
+    for (int axis = 0; axis < 3; axis++) {
+        pidData[axis].I = 0.0f;
+    }
+}
+
+void pidResetITermWithoutYaw(void)
+{
+    for (int axis = 0; axis < 2; axis++) {
+        pidData[axis].I = 0.0f;
+    }
+}
+
 static FAST_RAM float itermAccelerator = 1.0f;
 
 void pidSetItermAccelerator(float newItermAccelerator)
@@ -477,7 +491,7 @@ void pidInitConfig(const pidProfile_t *pidProfile)
 #endif
     itermRotation = pidProfile->iterm_rotation;
     antiGravityMode = pidProfile->antiGravityMode;
-    
+
     // Calculate the anti-gravity value that will trigger the OSD display.
     // For classic AG it's either 1.0 for off and > 1.0 for on.
     // For the new AG it's a continuous floating value so we want to trigger the OSD
@@ -603,11 +617,14 @@ STATIC_UNIT_TESTED float pidLevel(int axis, const pidProfile_t *pidProfile, cons
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(GPS_RESCUE_MODE)) {
         // ANGLE mode - control is angle based
         currentPidSetpoint = errorAngle * levelGain;
+
     } else {
         // HORIZON mode - mix of ANGLE and ACRO modes
         // mix in errorAngle to currentPidSetpoint to add a little auto-level feel
+
         const float horizonLevelStrength = calcHorizonLevelStrength();
         currentPidSetpoint = currentPidSetpoint + (errorAngle * horizonGain * horizonLevelStrength);
+        currentPidSetpoint = errorAngle * horizonGain;
     }
     return currentPidSetpoint;
 }
@@ -783,7 +800,7 @@ static FAST_CODE_NOINLINE float applyAcroTrainer(int axis, const rollAndPitchTri
         if (acroTrainerAxisState[axis] != 0) {
             ret = constrainf(((acroTrainerAngleLimit * angleSign) - currentAngle) * acroTrainerGain, -ACRO_TRAINER_SETPOINT_LIMIT, ACRO_TRAINER_SETPOINT_LIMIT);
         } else {
-        
+
         // Not currently over the limit so project the angle based on current angle and
         // gyro angular rate using a sliding window based on gyro rate (faster rotation means larger window.
         // If the projected angle exceeds the limit then apply limiting to minimize overshoot.
@@ -800,7 +817,7 @@ static FAST_CODE_NOINLINE float applyAcroTrainer(int axis, const rollAndPitchTri
         if (resetIterm) {
             pidData[axis].I = 0;
         }
- 
+
         if (axis == acroTrainerDebugAxis) {
             DEBUG_SET(DEBUG_ACRO_TRAINER, 0, lrintf(currentAngle * 10.0f));
             DEBUG_SET(DEBUG_ACRO_TRAINER, 1, acroTrainerAxisState[axis]);
@@ -1044,10 +1061,10 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, const rollAndPitchT
         previousGyroRateDterm[axis] = gyroRateDterm[axis];
 
         // -----calculate feedforward component
-        
+
         // Only enable feedforward for rate mode
         const float feedforwardGain = flightModeFlags ? 0.0f : pidCoefficient[axis].Kf;
-        
+
         if (feedforwardGain > 0) {
 
             // no transition if feedForwardTransition == 0
@@ -1073,7 +1090,7 @@ void FAST_CODE pidController(const pidProfile_t *pidProfile, const rollAndPitchT
         if (yawSpinActive) {
             pidData[axis].I = 0;  // in yaw spin always disable I
             if (axis <= FD_PITCH)  {
-                // zero PIDs on pitch and roll leaving yaw P to correct spin 
+                // zero PIDs on pitch and roll leaving yaw P to correct spin
                 pidData[axis].P = 0;
                 pidData[axis].D = 0;
                 pidData[axis].F = 0;
